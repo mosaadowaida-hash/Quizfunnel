@@ -1,0 +1,21 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --font-tajawal: var(--font-tajawal), sans-serif;
+  --font-cairo: var(--font-cairo), sans-serif;
+  
+  --color-primary: #0A192F;
+  --color-primary-light: #172A45;
+  --color-accent: #D4AF37;
+  --color-accent-light: #F3E5AB;
+  --color-accent-dark: #B38F24;
+}
+
+body {
+  font-family: var(--font-cairo);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-tajawal);
+}
