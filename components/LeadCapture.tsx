@@ -18,13 +18,16 @@ const categoryNames: Record<string, string> = {
 };
 
 export default function LeadCapture() {
-  const { topCategories, categoryScores } = useQuizStore();
+  const { topCategories, categoryScores, deficientCategories, recommendedVitamins } = useQuizStore();
   const [formData, setFormData] = useState({ name: '', email: '', phone: '' });
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  const topCategoryName = categoryNames[topCategories[0]] || 'الصحة العامة';
+  const isPerfectHealth = deficientCategories.length === 0;
+  const topCategoryName = isPerfectHealth 
+    ? 'الصحة العامة' 
+    : (categoryNames[deficientCategories[0]] || categoryNames[topCategories[0]] || 'الصحة العامة');
 
   useEffect(() => {
     event('ViewContent', { content_name: 'Lead Capture Screen' });
@@ -41,8 +44,9 @@ export default function LeadCapture() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          topCategories,
+          topCategories: isPerfectHealth ? ['general'] : deficientCategories,
           categoryScores,
+          recommendedVitamins,
         }),
       });
 
@@ -93,9 +97,15 @@ export default function LeadCapture() {
         <h2 className="text-2xl font-tajawal font-bold text-slate-800 mb-4">
           تم تحليل إجاباتك!
         </h2>
-        <p className="text-slate-600 leading-relaxed bg-accent/10 p-4 rounded-xl border border-accent/20">
-          اكتشفنا احتياجات أساسية لجسمك لتحسين <strong className="text-primary">{topCategoryName}</strong>. أدخل بياناتك لإرسال التقرير الطبي والبروتوكول الأمريكي المخصص لك.
-        </p>
+        {isPerfectHealth ? (
+          <p className="text-slate-600 leading-relaxed bg-green-50 p-4 rounded-xl border border-green-200">
+            رائع! إجاباتك تدل على نمط حياة صحي جداً. للحفاظ على هذه الحيوية وسد أي فجوات غذائية بسيطة، نوصي بهذه الأساسيات:
+          </p>
+        ) : (
+          <p className="text-slate-600 leading-relaxed bg-accent/10 p-4 rounded-xl border border-accent/20">
+            اكتشفنا احتياجات أساسية لجسمك لتحسين <strong className="text-primary">{topCategoryName}</strong>. أدخل بياناتك لإرسال التقرير الطبي والبروتوكول الأمريكي المخصص لك.
+          </p>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">

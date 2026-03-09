@@ -32,6 +32,25 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="ar" dir="rtl" className={`${tajawal.variable} ${cairo.variable}`}>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined') {
+                try {
+                  var originalFetch = window.fetch;
+                  Object.defineProperty(window, 'fetch', {
+                    configurable: true,
+                    enumerable: true,
+                    writable: true,
+                    value: originalFetch
+                  });
+                } catch (e) {
+                  console.warn('Could not make window.fetch writable', e);
+                }
+              }
+            `,
+          }}
+        />
       </head>
       <body className="font-cairo bg-slate-50 text-slate-900 antialiased min-h-screen flex flex-col" suppressHydrationWarning>
         <PixelScripts 

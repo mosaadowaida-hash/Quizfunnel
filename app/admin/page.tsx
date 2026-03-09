@@ -168,22 +168,22 @@ export default function AdminDashboard() {
   const generateEmailContent = (lead: any) => {
     if (!lead) return '';
 
-    const recommendations = lead.recommended_vitamins || lead.top_categories.flatMap((cat: string) => {
-      const key = `${cat}_high` as keyof typeof surveyData.scoring_rules.recommendation_mapping;
-      return surveyData.scoring_rules.recommendation_mapping[key] || [];
-    });
-
-    const uniqueRecommendations = Array.from(new Set(recommendations));
+    const recommendations = lead.recommended_vitamins || [];
+    const isPerfectHealth = lead.top_categories?.length === 1 && lead.top_categories[0] === 'general' && recommendations.includes('مالتي فيتامين فائق الجودة');
 
     let email = `مرحباً ${lead.full_name}،\n\n`;
-    email += `بناءً على التقييم الصحي الذي قمت به، وجدنا أن جسمك يحتاج إلى دعم إضافي في المجالات التالية:\n`;
-    lead.top_categories.forEach((cat: string) => {
-      email += `- ${categoryNames[cat] || cat}\n`;
-    });
+    
+    if (isPerfectHealth) {
+      email += `رائع! إجاباتك في التقييم الصحي تدل على نمط حياة صحي جداً. للحفاظ على هذه الحيوية وسد أي فجوات غذائية بسيطة، نوصي بهذه الأساسيات:\n\n`;
+    } else {
+      email += `بناءً على التقييم الصحي الذي قمت به، وجدنا أن جسمك يحتاج إلى دعم إضافي في المجالات التالية:\n`;
+      lead.top_categories?.forEach((cat: string) => {
+        email += `- ${categoryNames[cat] || cat}\n`;
+      });
+      email += `\nلذلك، نوصي بالبروتوكول الأمريكي التالي المصمم خصيصاً لك:\n\n`;
+    }
 
-    email += `\nلذلك، نوصي بالبروتوكول الأمريكي التالي المصمم خصيصاً لك:\n\n`;
-
-    uniqueRecommendations.forEach((vit: any) => {
+    recommendations.forEach((vit: any) => {
       const url = links[vit] || '#';
       email += `✅ ${vit}\n`;
       email += `رابط المنتج: ${url}\n\n`;
