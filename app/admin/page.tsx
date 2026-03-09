@@ -29,6 +29,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'leads' | 'links' | 'tracking'>('leads');
   const [links, setLinks] = useState<LinkConfig>({});
   const [masterBundleLink, setMasterBundleLink] = useState('');
+  const [savingLinks, setSavingLinks] = useState(false);
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [copied, setCopied] = useState(false);
   const [leads, setLeads] = useState<any[]>([]);
@@ -49,11 +50,6 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      const savedLinks = localStorage.getItem('americanBoxLinks');
-      const savedMaster = localStorage.getItem('americanBoxMasterBundle');
-      if (savedLinks) setLinks(JSON.parse(savedLinks));
-      if (savedMaster) setMasterBundleLink(savedMaster);
-      
       fetchLeads();
       fetchTrackingSettings();
     }
@@ -109,9 +105,14 @@ export default function AdminDashboard() {
         setMetaPixel(data.meta_pixel || '');
         setTiktokPixel(data.tiktok_pixel || '');
         setGaPixel(data.ga_pixel || '');
+        
+        if (data.product_links) {
+          setLinks(data.product_links.vitamins || {});
+          setMasterBundleLink(data.product_links.masterBundle || '');
+        }
       }
     } catch (error) {
-      console.error('Error fetching tracking settings:', error);
+      console.error('Error fetching settings:', error);
     }
   };
 
@@ -137,10 +138,27 @@ export default function AdminDashboard() {
     }
   };
 
-  const saveLinks = () => {
-    localStorage.setItem('americanBoxLinks', JSON.stringify(links));
-    localStorage.setItem('americanBoxMasterBundle', masterBundleLink);
-    alert('تم حفظ الروابط بنجاح');
+  const saveLinks = async () => {
+    setSavingLinks(true);
+    try {
+      const { error } = await supabase
+        .from('site_settings')
+        .upsert({
+          id: 1,
+          product_links: {
+            masterBundle: masterBundleLink,
+            vitamins: links
+          }
+        });
+        
+      if (error) throw error;
+      alert('تم حفظ الروابط بنجاح');
+    } catch (error) {
+      console.error('Error saving links:', error);
+      alert('حدث خطأ أثناء حفظ الروابط');
+    } finally {
+      setSavingLinks(false);
+    }
   };
 
   const handleLinkChange = (vitamin: string, url: string) => {
@@ -185,11 +203,30 @@ export default function AdminDashboard() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const allVitamins = Array.from(
-    new Set(
-      Object.values(surveyData.scoring_rules.recommendation_mapping).flat()
-    )
-  );
+  const allVitamins = [
+    'أوميجا-3 (EPA/DHA عالي التركيز)',
+    'مغنيسيوم جلايسينات',
+    'CoQ10',
+    'فيتامين D3 + K2',
+    'كالسيوم مركب',
+    'كولاجين مفصل أو جلوكوزامين',
+    'بروبيوتيك متعدد السلالات (50+ مليار)',
+    'إنزيمات هاضمة',
+    'ل-جلوتامين',
+    'أوميجا-3 (DHA عالي)',
+    'فيتامينات B المركبة (نشطة)',
+    'جينكو بيلوبا',
+    'ل-ثيانين',
+    'مغنيسيوم ثريونات',
+    'فيتامينات B المركبة',
+    'فيتامين B12 (ميثيل كوبالامين)',
+    'حديد (إذا كان هناك نقص مؤكد)',
+    'لوتين 10-20 مجم + زياكسانثين',
+    'أوميجا-3',
+    'فيتامين A و C و E + زنك',
+    'مالتي فيتامين فائق الجودة',
+    'فيتامين D3'
+  ];
 
   if (!isAuthenticated) {
     return (
@@ -362,8 +399,10 @@ export default function AdminDashboard() {
 
             <button
               onClick={saveLinks}
-              className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-light transition-colors"
+              disabled={savingLinks}
+              className="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary-light transition-colors flex items-center gap-2"
             >
+              {savingLinks ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
               حفظ الروابط
             </button>
           </div>

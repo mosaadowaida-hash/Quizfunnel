@@ -2,7 +2,7 @@
 
 import { usePathname, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 
 export const pageview = () => {
   if (typeof window !== 'undefined') {
@@ -32,7 +32,7 @@ interface PixelScriptsProps {
   gaPixel: string | null;
 }
 
-export default function PixelScripts({ metaPixel, tiktokPixel, gaPixel }: PixelScriptsProps) {
+function PixelScriptsInner({ metaPixel, tiktokPixel, gaPixel }: PixelScriptsProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -100,5 +100,13 @@ export default function PixelScripts({ metaPixel, tiktokPixel, gaPixel }: PixelS
         </>
       )}
     </>
+  );
+}
+
+export default function PixelScripts(props: PixelScriptsProps) {
+  return (
+    <Suspense fallback={null}>
+      <PixelScriptsInner {...props} />
+    </Suspense>
   );
 }

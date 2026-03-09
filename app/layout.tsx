@@ -32,13 +32,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="ar" dir="rtl" className={`${tajawal.variable} ${cairo.variable}`}>
       <head>
+      </head>
+      <body className="font-cairo bg-slate-50 text-slate-900 antialiased min-h-screen flex flex-col" suppressHydrationWarning>
         <PixelScripts 
           metaPixel={settings?.meta_pixel || null}
           tiktokPixel={settings?.tiktok_pixel || null}
           gaPixel={settings?.ga_pixel || null}
         />
-      </head>
-      <body className="font-cairo bg-slate-50 text-slate-900 antialiased min-h-screen flex flex-col" suppressHydrationWarning>
         {children}
       </body>
     </html>
