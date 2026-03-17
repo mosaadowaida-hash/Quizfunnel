@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Settings, Users, Link as LinkIcon, Copy, Check, X, Loader2, Activity } from 'lucide-react';
-import surveyData from '@/data/Survey-Questions.json';
+import surveyData from '@/data/quizzes/comprehensive.json';
 import { supabase } from '@/lib/supabaseClient';
 
 type LinkConfig = {
@@ -18,6 +18,12 @@ const categoryNames: Record<string, string> = {
   energy: 'الطاقة والنشاط',
   general: 'الصحة العامة',
   digestive: 'صحة الجهاز الهضمي',
+  immunity: 'دعم المناعة',
+  skin_hair: 'العناية بالبشرة والشعر',
+  'نقص الكالسيوم': 'نقص الكالسيوم',
+  'التهاب المفاصل': 'التهاب المفاصل',
+  'دعم عضلة القلب': 'دعم عضلة القلب',
+  'الدورة الدموية': 'الدورة الدموية'
 };
 
 export default function AdminDashboard() {
@@ -29,6 +35,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'leads' | 'links' | 'tracking'>('leads');
   const [links, setLinks] = useState<LinkConfig>({});
   const [masterBundleLink, setMasterBundleLink] = useState('');
+  const [customBundles, setCustomBundles] = useState<LinkConfig>({});
   const [savingLinks, setSavingLinks] = useState(false);
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [copied, setCopied] = useState(false);
@@ -109,6 +116,7 @@ export default function AdminDashboard() {
         if (data.product_links) {
           setLinks(data.product_links.vitamins || {});
           setMasterBundleLink(data.product_links.masterBundle || '');
+          setCustomBundles(data.product_links.customBundles || {});
         }
       }
     } catch (error) {
@@ -147,7 +155,8 @@ export default function AdminDashboard() {
           id: 1,
           product_links: {
             masterBundle: masterBundleLink,
-            vitamins: links
+            vitamins: links,
+            customBundles: customBundles
           }
         });
         
@@ -165,39 +174,98 @@ export default function AdminDashboard() {
     setLinks({ ...links, [vitamin]: url });
   };
 
-  const generateEmailContent = (lead: any) => {
+  const handleBundleChange = (bundleId: string, url: string) => {
+    setCustomBundles({ ...customBundles, [bundleId]: url });
+  };
+
+  const getVitaminCategory = (vitaminName: string) => {
+    // We can just use the comprehensive mapping as a fallback, or we could load all mappings.
+    // For simplicity, we'll just return a generic category if not found in comprehensive.
+    for (const [key, vitamins] of Object.entries(surveyData.scoring_rules.recommendation_mapping)) {
+      if ((vitamins as string[]).includes(vitaminName)) {
+        const cat = key.replace('_high', '');
+        return categoryNames[cat] || cat;
+      }
+    }
+    return 'صحتك العامة';
+  };
+
+  const generateWhatsAppReport = (lead: any) => {
     if (!lead) return '';
 
-    const recommendations = lead.recommended_vitamins || [];
-    const isPerfectHealth = lead.top_categories?.length === 1 && lead.top_categories[0] === 'general' && recommendations.includes('مالتي فيتامين فائق الجودة');
-
-    let email = `مرحباً ${lead.full_name}،\n\n`;
+    const ageStr = lead.age ? lead.age : 'غير محدد';
+    const genderStr = lead.gender ? lead.gender : 'غير محدد';
     
-    if (isPerfectHealth) {
-      email += `رائع! إجاباتك في التقييم الصحي تدل على نمط حياة صحي جداً. للحفاظ على هذه الحيوية وسد أي فجوات غذائية بسيطة، نوصي بهذه الأساسيات:\n\n`;
-    } else {
-      email += `بناءً على التقييم الصحي الذي قمت به، وجدنا أن جسمك يحتاج إلى دعم إضافي في المجالات التالية:\n`;
-      lead.top_categories?.forEach((cat: string) => {
-        email += `- ${categoryNames[cat] || cat}\n`;
-      });
-      email += `\nلذلك، نوصي بالبروتوكول الأمريكي التالي المصمم خصيصاً لك:\n\n`;
+    let medicalHistoryStr = 'الذي ذكرته';
+    if (lead.chronic_diseases || lead.medical_history) {
+      const parts = [];
+      if (lead.chronic_diseases) parts.push(lead.chronic_diseases);
+      if (lead.medical_history) parts.push(lead.medical_history);
+      medicalHistoryStr = parts.join('، ');
     }
+
+    const recommendations = lead.recommended_vitamins || [];
+    const topCategoriesList = lead.top_categories?.map((cat: string) => categoryNames[cat] || cat).join('، ') || 'الصحة العامة';
+
+    let bundleLink = masterBundleLink;
+    if (lead.quiz_type === 'صحة العظام والمفاصل') {
+      bundleLink = customBundles['bones'] || masterBundleLink;
+    } else if (lead.quiz_type === 'صحة القلب والأوعية الدموية') {
+      bundleLink = customBundles['heart'] || masterBundleLink;
+    } else if (lead.quiz_type === 'الصحة النفسية وتقليل التوتر') {
+      bundleLink = customBundles['mental'] || masterBundleLink;
+    } else if (lead.quiz_type === 'دعم المناعة') {
+      bundleLink = customBundles['immunity'] || masterBundleLink;
+    } else if (lead.quiz_type === 'فقدان الوزن والتمثيل الغذائي') {
+      bundleLink = customBundles['weight'] || masterBundleLink;
+    } else if (lead.quiz_type === 'مكافحة الشيخوخة (Anti-Aging)') {
+      bundleLink = customBundles['antiaging'] || masterBundleLink;
+    } else if (lead.quiz_type === 'العناية بالبشرة') {
+      bundleLink = customBundles['skin'] || masterBundleLink;
+    } else if (lead.quiz_type === 'العناية بالشعر') {
+      bundleLink = customBundles['hair'] || masterBundleLink;
+    } else if (lead.quiz_type === 'المكملات الرياضية وبناء العضلات') {
+      bundleLink = customBundles['sports'] || masterBundleLink;
+    } else if (lead.quiz_type === 'صحة الطفل') {
+      bundleLink = customBundles['child'] || masterBundleLink;
+    }
+
+    let msg = `تقريرك الصحي المفصل من عيادة American Box 🇺🇸\n\n`;
+    msg += `أهلاً ${lead.full_name}،\n`;
+    msg += `لقد قام خبراؤنا بدراسة ملفك الصحي بعناية (السن: ${ageStr}، الجنس: ${genderStr})، وبناءً على إجاباتك الدقيقة وتاريخك المرضي: ${medicalHistoryStr}، قمنا بتحليل مؤشراتك الحيوية.\n\n`;
+
+    msg += `⚠️ **التشخيص المبدئي:**\n`;
+    msg += `اكتشفنا وجود استنزاف واضح ونقص في دعم المناطق التالية: ${topCategoriesList}.\n`;
+    msg += `الاستمرار بنفس هذا النمط الصحي دون تدخل قد يؤدي إلى تفاقم الشعور بالإرهاق، ضعف الأداء اليومي، وتراجع في جودة حياتك بشكل عام على المدى الطويل. جسمك الآن يعطي إشارات واضحة ويحتاج إلى الدعم.\n\n`;
+
+    msg += `💊 **البروتوكول العلاجي المقترح (مدة الكورس: 3 إلى 6 أشهر):**\n`;
+    msg += `لقد صممنا لك هذا البروتوكول الأمريكي المخصص لحالتك:\n\n`;
 
     recommendations.forEach((vit: any) => {
       const url = links[vit] || '#';
-      email += `✅ ${vit}\n`;
-      email += `رابط المنتج: ${url}\n\n`;
+      const mappedCategory = getVitaminCategory(vit);
+      
+      msg += `✅ **${vit}**\n`;
+      msg += `- **لماذا نرشحه لك؟** لتعويض النقص المباشر ودعم ${mappedCategory}.\n`;
+      msg += `- **طريقة الاستخدام:** كبسولة واحدة يومياً بعد الوجبة الرئيسية.\n`;
+      msg += `- **رابط المنتج:** ${url}\n\n`;
     });
 
-    email += `🎁 عرض خاص لك! احصل على خصم 20% عند شراء الباقة المتكاملة (Master Bundle):\n`;
-    email += `${masterBundleLink || '#'}\n\n`;
-    email += `مع تمنياتنا بدوام الصحة والعافية،\nفريق American Box`;
+    msg += `🎁 **الحل الجذري (عرض الباقة المتكاملة):**\n`;
+    msg += `للحصول على أسرع نتيجة، يمكنك الحصول على كل ما يحتاجه جسمك في "الباقة المتكاملة" بخصم حصري 20% من هنا:\n`;
+    msg += `👉 ${bundleLink || '#'}\n\n`;
 
-    return email;
+    msg += `🔬 **المتابعة والتحاليل:**\n`;
+    msg += `لضمان أفضل النتائج، نوصي بإجراء تحاليل دورية (مثل صورة دم كاملة وفيتامين د)، ونتمنى منك التواصل معنا كل 30 يوماً لمتابعة تطور حالتك وتحديث البروتوكول إذا لزم الأمر.\n\n`;
+
+    msg += `مع تمنياتنا لك بدوام الصحة،\n`;
+    msg += `فريقك الطبي - American Box`;
+
+    return msg;
   };
 
   const copyToClipboard = () => {
-    const content = generateEmailContent(selectedLead);
+    const content = generateWhatsAppReport(selectedLead);
     navigator.clipboard.writeText(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -318,8 +386,9 @@ export default function AdminDashboard() {
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
                   <th className="p-4 font-bold text-slate-600">الاسم</th>
+                  <th className="p-4 font-bold text-slate-600">نوع الاستبيان</th>
+                  <th className="p-4 font-bold text-slate-600">السن/الجنس</th>
                   <th className="p-4 font-bold text-slate-600">رقم الهاتف</th>
-                  <th className="p-4 font-bold text-slate-600">البريد الإلكتروني</th>
                   <th className="p-4 font-bold text-slate-600">أهم الاحتياجات</th>
                   <th className="p-4 font-bold text-slate-600">التاريخ</th>
                   <th className="p-4 font-bold text-slate-600">إجراءات</th>
@@ -328,14 +397,14 @@ export default function AdminDashboard() {
               <tbody>
                 {loadingLeads ? (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-slate-500">
+                    <td colSpan={7} className="p-8 text-center text-slate-500">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                       جاري تحميل البيانات...
                     </td>
                   </tr>
                 ) : leads.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-slate-500">
+                    <td colSpan={7} className="p-8 text-center text-slate-500">
                       لا يوجد عملاء محتملين حتى الآن.
                     </td>
                   </tr>
@@ -343,8 +412,15 @@ export default function AdminDashboard() {
                   leads.map((lead) => (
                     <tr key={lead.id} className="border-b border-slate-100 hover:bg-slate-50">
                       <td className="p-4 font-medium text-slate-800">{lead.full_name}</td>
+                      <td className="p-4 text-slate-600">
+                        <span className="px-2 py-1 bg-primary/10 text-primary rounded-md text-xs font-bold">
+                          {lead.quiz_type || 'شامل'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-slate-600">
+                        {lead.age ? `${lead.age} سنة` : '-'} / {lead.gender || '-'}
+                      </td>
                       <td className="p-4 text-slate-600" dir="ltr">{lead.whatsapp}</td>
-                      <td className="p-4 text-slate-600" dir="ltr">{lead.email || '-'}</td>
                       <td className="p-4 text-slate-600">
                         {lead.top_categories?.map((c: string) => categoryNames[c] || c).join('، ')}
                       </td>
@@ -354,7 +430,7 @@ export default function AdminDashboard() {
                           onClick={() => setSelectedLead(lead)}
                           className="px-3 py-1.5 bg-accent/10 text-accent-dark font-bold rounded-lg hover:bg-accent/20 transition-colors text-sm"
                         >
-                          إنشاء رسالة
+                          إنشاء تقرير
                         </button>
                       </td>
                     </tr>
@@ -381,6 +457,35 @@ export default function AdminDashboard() {
               />
             </div>
 
+            <h3 className="text-lg font-tajawal font-bold text-slate-800 mb-4 mt-8">باقات الاستبيانات المخصصة</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 p-4 bg-slate-50 rounded-xl border border-slate-200">
+              {[
+                { id: 'bones', label: 'باندل صحة العظام' },
+                { id: 'heart', label: 'باندل صحة القلب' },
+                { id: 'mental', label: 'باندل الصحة النفسية' },
+                { id: 'immunity', label: 'باندل دعم المناعة' },
+                { id: 'weight', label: 'باندل فقدان الوزن' },
+                { id: 'antiaging', label: 'باندل مكافحة الشيخوخة' },
+                { id: 'skin', label: 'باندل العناية بالبشرة' },
+                { id: 'hair', label: 'باندل العناية بالشعر' },
+                { id: 'sports', label: 'باندل المكملات الرياضية' },
+                { id: 'child', label: 'باندل صحة الطفل' },
+              ].map((bundle) => (
+                <div key={bundle.id} className="flex flex-col gap-1">
+                  <label className="text-sm font-bold text-slate-700">{bundle.label}</label>
+                  <input
+                    type="url"
+                    value={customBundles[bundle.id] || ''}
+                    onChange={(e) => handleBundleChange(bundle.id, e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-left text-sm"
+                    placeholder="https://..."
+                    dir="ltr"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <h3 className="text-lg font-tajawal font-bold text-slate-800 mb-4 mt-8">الفيتامينات الفردية</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
               {allVitamins.map((vit) => (
                 <div key={vit} className="flex flex-col gap-1">
@@ -469,7 +574,7 @@ export default function AdminDashboard() {
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 className="font-tajawal font-bold text-lg text-slate-800">رسالة مخصصة لـ {selectedLead.full_name}</h3>
+                <h3 className="font-tajawal font-bold text-lg text-slate-800">تقرير واتساب لـ {selectedLead.full_name}</h3>
                 <button onClick={() => setSelectedLead(null)} className="p-1 hover:bg-slate-200 rounded-lg transition-colors">
                   <X className="w-5 h-5 text-slate-500" />
                 </button>
@@ -477,7 +582,7 @@ export default function AdminDashboard() {
               
               <div className="p-6 overflow-y-auto flex-grow">
                 <pre className="whitespace-pre-wrap font-cairo text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-200 text-sm leading-relaxed">
-                  {generateEmailContent(selectedLead)}
+                  {generateWhatsAppReport(selectedLead)}
                 </pre>
               </div>
 
@@ -490,10 +595,10 @@ export default function AdminDashboard() {
                 </button>
                 <button
                   onClick={copyToClipboard}
-                  className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-light transition-colors"
+                  className="flex items-center gap-2 px-6 py-2 bg-[#25D366] text-white rounded-lg font-bold hover:bg-[#20bd5a] transition-colors"
                 >
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copied ? 'تم النسخ!' : 'نسخ الرسالة'}
+                  {copied ? 'تم النسخ!' : 'نسخ التقرير'}
                 </button>
               </div>
             </div>

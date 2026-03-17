@@ -2,16 +2,32 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShieldCheck, Activity, HeartPulse, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, Activity, HeartPulse, ArrowLeft, Bone, Heart, Brain, Shield, Scale, Sparkles, Droplets, Scissors, Dumbbell, Baby } from 'lucide-react';
 import QuizFlow from '@/components/QuizFlow';
 import { event } from '@/components/PixelScripts';
 import Footer from '@/components/Footer';
+import { useQuizStore } from '@/store/quizStore';
+
+const customQuizzes = [
+  { id: 'bones', title: 'صحة العظام والمفاصل', icon: Bone, color: 'text-orange-500', bg: 'bg-orange-50' },
+  { id: 'heart', title: 'صحة القلب والأوعية الدموية', icon: Heart, color: 'text-red-500', bg: 'bg-red-50' },
+  { id: 'mental', title: 'الصحة النفسية وتقليل التوتر', icon: Brain, color: 'text-purple-500', bg: 'bg-purple-50' },
+  { id: 'immunity', title: 'دعم المناعة', icon: Shield, color: 'text-green-500', bg: 'bg-green-50' },
+  { id: 'weight', title: 'فقدان الوزن والتمثيل الغذائي', icon: Scale, color: 'text-blue-500', bg: 'bg-blue-50' },
+  { id: 'antiaging', title: 'مكافحة الشيخوخة (Anti-Aging)', icon: Sparkles, color: 'text-amber-500', bg: 'bg-amber-50' },
+  { id: 'skin', title: 'العناية بالبشرة', icon: Droplets, color: 'text-pink-500', bg: 'bg-pink-50' },
+  { id: 'hair', title: 'العناية بالشعر', icon: Scissors, color: 'text-rose-500', bg: 'bg-rose-50' },
+  { id: 'sports', title: 'المكملات الرياضية وبناء العضلات', icon: Dumbbell, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+  { id: 'child', title: 'صحة الطفل', icon: Baby, color: 'text-teal-500', bg: 'bg-teal-50' },
+];
 
 export default function Home() {
   const [started, setStarted] = useState(false);
+  const { setQuizType } = useQuizStore();
 
-  const handleStart = () => {
-    event('StartQuiz');
+  const handleStart = (type: string = 'شامل') => {
+    setQuizType(type);
+    event('StartQuiz', { quiz_type: type });
     setStarted(true);
   };
 
@@ -32,7 +48,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="z-10 max-w-4xl mx-auto px-6 py-12 text-center flex flex-col items-center"
+              className="z-10 w-full max-w-5xl mx-auto px-6 py-12 text-center flex flex-col items-center"
             >
               <div className="mb-8 inline-flex items-center justify-center p-4 bg-white rounded-2xl shadow-sm border border-slate-100">
                 <span className="text-2xl font-tajawal font-bold text-primary tracking-tight">
@@ -51,15 +67,42 @@ export default function Home() {
               </p>
 
               <button
-                onClick={handleStart}
-                className="group relative inline-flex items-center justify-center gap-3 px-8 py-4 bg-primary text-white rounded-xl text-lg font-bold overflow-hidden transition-transform hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-primary/30"
+                onClick={() => handleStart('شامل')}
+                className="group relative inline-flex items-center justify-center gap-3 px-10 py-5 bg-primary text-white rounded-2xl text-xl font-bold overflow-hidden transition-transform hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-primary/30 w-full max-w-md"
               >
-                <span className="relative z-10">ابدأ التقييم الصحي الآن</span>
-                <ArrowLeft className="w-5 h-5 relative z-10 group-hover:-translate-x-1 transition-transform" />
+                <span className="relative z-10">الاستبيان الصحي الشامل</span>
+                <ArrowLeft className="w-6 h-6 relative z-10 group-hover:-translate-x-1 transition-transform" />
                 <div className="absolute inset-0 bg-gradient-to-r from-primary-light to-primary opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
 
-              <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-3xl">
+              <div className="mt-16 w-full">
+                <h2 className="text-2xl font-tajawal font-bold text-slate-800 mb-8 relative inline-block">
+                  أو اختر استبياناً مخصصاً لحالتك:
+                  <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-12 h-1 bg-accent rounded-full" />
+                </h2>
+                
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {customQuizzes.map((quiz) => {
+                    const Icon = quiz.icon;
+                    return (
+                      <button
+                        key={quiz.id}
+                        onClick={() => handleStart(quiz.title)}
+                        className="flex flex-col items-center p-6 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-primary/30 transition-all group"
+                      >
+                        <div className={`w-14 h-14 rounded-full ${quiz.bg} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                          <Icon className={`w-7 h-7 ${quiz.color}`} />
+                        </div>
+                        <h3 className="font-tajawal font-bold text-slate-700 text-sm leading-tight">
+                          {quiz.title}
+                        </h3>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-3xl">
                 <div className="flex flex-col items-center p-6 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20 shadow-sm">
                   <ShieldCheck className="w-8 h-8 text-accent mb-3" />
                   <h3 className="font-tajawal font-bold text-slate-800 mb-1">بيانات آمنة</h3>
