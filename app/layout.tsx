@@ -37,15 +37,24 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             __html: `
               if (typeof window !== 'undefined') {
                 try {
-                  var originalFetch = window.fetch;
-                  Object.defineProperty(window, 'fetch', {
-                    configurable: true,
-                    enumerable: true,
-                    writable: true,
-                    value: originalFetch
-                  });
+                  var originalDefineProperty = Object.defineProperty;
+                  Object.defineProperty = function(obj, prop, descriptor) {
+                    if (prop === 'fetch' && (obj === window || obj === globalThis)) {
+                      if (descriptor.get && !descriptor.set) {
+                        var originalGet = descriptor.get;
+                        var currentFetch;
+                        var isSet = false;
+                        descriptor.get = function() { return isSet ? currentFetch : originalGet.call(obj); };
+                        descriptor.set = function(newFetch) { currentFetch = newFetch; isSet = true; };
+                      } else if ('value' in descriptor && !descriptor.writable) {
+                        descriptor.writable = true;
+                      }
+                      descriptor.configurable = true;
+                    }
+                    return originalDefineProperty(obj, prop, descriptor);
+                  };
                 } catch (e) {
-                  console.warn('Could not make window.fetch writable', e);
+                  console.warn('Could not patch Object.defineProperty', e);
                 }
               }
             `,

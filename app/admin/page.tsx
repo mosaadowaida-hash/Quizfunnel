@@ -190,6 +190,44 @@ export default function AdminDashboard() {
     return 'صحتك العامة';
   };
 
+  const QuizTypeContent: Record<string, { warning: string }> = {
+    "شامل": { warning: "تجاهل هذه المؤشرات الحيوية قد يؤدي لتفاقم الإرهاق وضعف الأداء العام. جسمك يحتاج لإعادة توازن فوري." },
+    "صحة العظام والمفاصل": { warning: "استمرار نقص هذه العناصر قد يُسرع من تآكل الغضاريف ويزيد من تيبس المفاصل، مما يؤثر على حركتك وراحتك اليومية." },
+    "صحة القلب والأوعية الدموية": { warning: "مؤشرات الإجهاد التأكسدي وضعف الدورة الدموية تتطلب تدخلاً فورياً لحماية عضلة القلب والشرايين من الإرهاق المستمر." },
+    "الصحة النفسية وتقليل التوتر": { warning: "استمرار ارتفاع الكورتيزول وضعف جودة النوم يستنزف طاقتك الذهنية، مما يؤدي إلى ضبابية الدماغ (Brain Fog) وتقلبات مزاجية حادة." },
+    "دعم المناعة": { warning: "تجاهل هذه الفجوات يجعل جسمك عرضة للالتهابات المتكررة ويبطئ من سرعة الاستشفاء الطبيعي." },
+    "فقدان الوزن والتمثيل الغذائي": { warning: "بطء معدل الحرق ومقاومة الأنسولين يضاعفان من صعوبة نزول الوزن ويستنزفان طاقتك اليومية بعد الوجبات." },
+    "مكافحة الشيخوخة (Anti-Aging)": { warning: "تراجع مستويات الطاقة الخلوية (NAD+) يُسرع من ظهور علامات التقدم في العمر البيولوجي وتراجع الحيوية." },
+    "مكافحة الشيخوخة": { warning: "تراجع مستويات الطاقة الخلوية (NAD+) يُسرع من ظهور علامات التقدم في العمر البيولوجي وتراجع الحيوية." },
+    "العناية بالبشرة": { warning: "نقص ترطيب الخلايا ومضادات الأكسدة يُسرع من فقدان الكولاجين الطبيعي ويُظهر التصبغات والخطوط الدقيقة." },
+    "العناية بالشعر": { warning: "استمرار نقص التغذية الموجهة للبصيلات سيؤدي لزيادة دورة تساقط الشعر وضعف كثافته بشكل قد يصعب تداركه لاحقاً." },
+    "المكملات الرياضية وبناء العضلات": { warning: "نقص عناصر الاستشفاء يؤدي إلى بطء البناء العضلي، زيادة الإرهاق بعد التمرين (DOMS)، ورفع خطر الإصابة." },
+    "صحة الطفل": { warning: "تجاهل هذه الإشارات قد يؤثر على سرعة التطور الذهني، الاستيعاب، والنمو البدني السليم لطفلك في هذه المرحلة الحرجة." }
+  };
+
+  const ProductDetails: Record<string, { benefit: string, usage: string }> = {
+    "Nordic naturals Children’s DHA": { benefit: "يُعد من أنقى مصادر الأوميجا 3 لدعم التطور الذهني للطفل، ورفع معدلات التركيز والذكاء بشكل ملحوظ.", usage: "تُحدد الجرعة حسب الوزن (مدونة على العبوة)، ويُفضل مع وجبة." },
+    "Deal Supplement Vitamin D3 + K2": { benefit: "دمج الـ D3 مع الـ K2 (MK-7) يضمن توجيه الكالسيوم مباشرة للعظام بدلاً من الشرايين، مما يدعم العظام والمناعة بفعالية.", usage: "كبسولة واحدة يومياً مع وجبة تحتوي على دهون صحية." },
+    "Viviscal Hair Growth Supplement": { benefit: "يغذي بصيلات الشعر من الداخل ويطيل دورة نمو الشعر للحد من الترقق والتساقط المستمر.", usage: "قرص مرتين يومياً (صباحاً ومساءً) بعد الأكل مع كوب ماء لمدة 3-6 أشهر." },
+    "Nutricost Lithium Orotate": { benefit: "شكل آمن من الليثيوم بجرعة منخفضة (5mg) لدعم الهدوء العصبي، التركيز، وإدارة التوتر اليومي.", usage: "كبسولة واحدة يومياً مع ماء كافٍ." },
+    "Sports Research D3 + K2": { benefit: "مُحمل بزيت جوز الهند (MCT) لضمان أقصى درجات الامتصاص، يدعم كثافة العظام وقوة الجهاز المناعي.", usage: "سوفتجل واحد يومياً مع الطعام." },
+    "Sports Research Magnesium L-Threonate": { benefit: "شكل المغنيسيوم الوحيد القادر على اختراق حاجز الدماغ (Magtein) لدعم الذاكرة، التركيز، وجودة النوم العميق.", usage: "3 كبسولات نباتية يومياً مع الطعام." },
+    "Berberine WellBetX 60 caps": { benefit: "بديل طبيعي قوي لدعم حساسية الأنسولين وضبط مستويات السكر، مما يسرع معدل حرق الدهون العنيدة.", usage: "كبسولة واحدة مرتين يومياً مع الوجبات." },
+    "Sports Research MCT Oil": { benefit: "دهون متوسطة السلسلة تُهضم فوراً لتتحول إلى طاقة سريعة للدماغ والجسم، وتدعم معدل الحرق.", usage: "ابدأ بملعقة كبيرة (15ml) يومياً ويمكن إضافته للقهوة أو السموثي." },
+    "Solgar Coq-10": { benefit: "يعمل كشرارة طاقة للخلايا، يدعم صحة عضلة القلب بقوة ويحارب الشيخوخة والإرهاق الخلوي.", usage: "كبسولة واحدة يومياً." },
+    "NOW Iron Complex": { benefit: "حديد مخلب (Ferrochel) لطيف على المعدة ولا يسبب إمساك، مع فيتامين C وفولات لضمان الامتصاص السريع وعلاج الإرهاق.", usage: "كبسولة واحدة يومياً مع وجبة، ويُفضل بعيداً عن الكالسيوم أو القهوة." },
+    "Charava NMN Powder": { benefit: "يعزز مسارات (NAD+) داخل الجسم لتجديد الطاقة الخلوية، ومكافحة علامات التقدم في العمر البيولوجي.", usage: "مكيال واحد (500mg) يومياً صباحاً." },
+    "NOW Foods Liquid Chlorophyll": { benefit: "سائل غني بمضادات الأكسدة بنكهة النعناع، يدعم الديتوكس الطبيعي، صحة الهضم، والانتعاش الداخلي.", usage: "ملعقة صغيرة (5ml) يومياً في كوب ماء." }
+  };
+
+  const getProductDetails = (vit: string) => {
+    if (ProductDetails[vit]) return ProductDetails[vit];
+    return {
+      benefit: "لتعويض النقص المباشر ودعم أهدافك الصحية المحددة في الاستبيان.",
+      usage: "حسب التوجيهات المدونة على العبوة."
+    };
+  };
+
   const generateWhatsAppReport = (lead: any) => {
     if (!lead) return '';
 
@@ -218,7 +256,7 @@ export default function AdminDashboard() {
       bundleLink = customBundles['immunity'] || masterBundleLink;
     } else if (lead.quiz_type === 'فقدان الوزن والتمثيل الغذائي') {
       bundleLink = customBundles['weight'] || masterBundleLink;
-    } else if (lead.quiz_type === 'مكافحة الشيخوخة (Anti-Aging)') {
+    } else if (lead.quiz_type === 'مكافحة الشيخوخة (Anti-Aging)' || lead.quiz_type === 'مكافحة الشيخوخة') {
       bundleLink = customBundles['antiaging'] || masterBundleLink;
     } else if (lead.quiz_type === 'العناية بالبشرة') {
       bundleLink = customBundles['skin'] || masterBundleLink;
@@ -230,24 +268,26 @@ export default function AdminDashboard() {
       bundleLink = customBundles['child'] || masterBundleLink;
     }
 
+    const quizTypeWarning = QuizTypeContent[lead.quiz_type || 'شامل']?.warning || QuizTypeContent['شامل'].warning;
+
     let msg = `تقريرك الصحي المفصل من عيادة American Box 🇺🇸\n\n`;
     msg += `أهلاً ${lead.full_name}،\n`;
     msg += `لقد قام خبراؤنا بدراسة ملفك الصحي بعناية (السن: ${ageStr}، الجنس: ${genderStr})، وبناءً على إجاباتك الدقيقة وتاريخك المرضي: ${medicalHistoryStr}، قمنا بتحليل مؤشراتك الحيوية.\n\n`;
 
     msg += `⚠️ **التشخيص المبدئي:**\n`;
     msg += `اكتشفنا وجود استنزاف واضح ونقص في دعم المناطق التالية: ${topCategoriesList}.\n`;
-    msg += `الاستمرار بنفس هذا النمط الصحي دون تدخل قد يؤدي إلى تفاقم الشعور بالإرهاق، ضعف الأداء اليومي، وتراجع في جودة حياتك بشكل عام على المدى الطويل. جسمك الآن يعطي إشارات واضحة ويحتاج إلى الدعم.\n\n`;
+    msg += `${quizTypeWarning}\n\n`;
 
     msg += `💊 **البروتوكول العلاجي المقترح (مدة الكورس: 3 إلى 6 أشهر):**\n`;
     msg += `لقد صممنا لك هذا البروتوكول الأمريكي المخصص لحالتك:\n\n`;
 
     recommendations.forEach((vit: any) => {
       const url = links[vit] || '#';
-      const mappedCategory = getVitaminCategory(vit);
+      const details = getProductDetails(vit);
       
       msg += `✅ **${vit}**\n`;
-      msg += `- **لماذا نرشحه لك؟** لتعويض النقص المباشر ودعم ${mappedCategory}.\n`;
-      msg += `- **طريقة الاستخدام:** كبسولة واحدة يومياً بعد الوجبة الرئيسية.\n`;
+      msg += `- **لماذا نرشحه لك؟** ${details.benefit}\n`;
+      msg += `- **طريقة الاستخدام:** ${details.usage}\n`;
       msg += `- **رابط المنتج:** ${url}\n\n`;
     });
 
@@ -293,7 +333,19 @@ export default function AdminDashboard() {
     'أوميجا-3',
     'فيتامين A و C و E + زنك',
     'مالتي فيتامين فائق الجودة',
-    'فيتامين D3'
+    'فيتامين D3',
+    'Nordic naturals Children’s DHA',
+    'Deal Supplement Vitamin D3 + K2',
+    'Viviscal Hair Growth Supplement',
+    'Nutricost Lithium Orotate',
+    'Sports Research D3 + K2',
+    'Sports Research Magnesium L-Threonate',
+    'Berberine WellBetX 60 caps',
+    'Sports Research MCT Oil',
+    'Solgar Coq-10',
+    'NOW Iron Complex',
+    'Charava NMN Powder',
+    'NOW Foods Liquid Chlorophyll'
   ];
 
   if (!isAuthenticated) {
