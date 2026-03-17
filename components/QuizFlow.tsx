@@ -187,6 +187,9 @@ export default function QuizFlow() {
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none h-24"
                 placeholder="أي تفاصيل طبية أخرى أو أدوية تتناولها حالياً..."
               />
+              <p className="mt-2 text-xs font-medium text-red-500/80 italic">
+                *تنويه هام: إذا كنت لا تعاني من أي أمراض مزمنة أو ليس لديك تاريخ مرضي ولا تتناول أدوية، يرجى ترك خانتي الأمراض المزمنة والتاريخ المرضي فارغتين تماماً (لا تكتب "لا يوجد") لضمان دقة التشخيص.
+              </p>
             </div>
 
             {error && (

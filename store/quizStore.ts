@@ -104,7 +104,7 @@ export const useQuizStore = create<QuizState>((set, get) => ({
   },
 
   calculateResults: () => {
-    const { answers, age, gender, chronicDiseases, quizData } = get();
+    const { answers, age, gender, chronicDiseases, quizData, quizType } = get();
     if (!quizData) return;
     
     const questions = quizData.universal_quiz.questions;
@@ -136,6 +136,9 @@ export const useQuizStore = create<QuizState>((set, get) => ({
     });
 
     const riskPercentages: Record<string, number> = {};
+    const ignoredPhrases = ["لا", "لا يوجد", "لا شيء", "لاشي", "لايوجد", "الحمد لله", "الحمدلله", "none", "nothing", "no"];
+    const hasChronicDisease = chronicDiseases && chronicDiseases.trim() !== '' && !ignoredPhrases.includes(chronicDiseases.trim().toLowerCase());
+
     Object.keys(newScores).forEach((category) => {
       const max = maxScores[category] || 0;
       const score = newScores[category] || 0;
@@ -143,23 +146,26 @@ export const useQuizStore = create<QuizState>((set, get) => ({
 
       // Dynamic Medical Scoring Multipliers
       const ageNum = parseInt(age);
+      const isChildQuiz = quizType === 'صحة الطفل';
       
-      // Rule 1: Age >= 40
-      if (!isNaN(ageNum) && ageNum >= 40) {
-        if (category === 'bones' || category === 'heart' || category === 'نقص الكالسيوم' || category === 'دعم عضلة القلب') {
-          risk += 15;
+      if (!isChildQuiz) {
+        // Rule 1: Age >= 40
+        if (!isNaN(ageNum) && ageNum >= 40) {
+          if (category === 'bones' || category === 'heart' || category === 'نقص الكالسيوم' || category === 'دعم عضلة القلب') {
+            risk += 15;
+          }
         }
-      }
 
-      // Rule 2: Gender === "أنثى"
-      if (gender === 'أنثى') {
-        if (category === 'bones' || category === 'skin_hair' || category === 'نقص الكالسيوم') {
-          risk += 10;
+        // Rule 2: Gender === "أنثى"
+        if (gender === 'أنثى') {
+          if (category === 'bones' || category === 'skin_hair' || category === 'نقص الكالسيوم') {
+            risk += 10;
+          }
         }
       }
 
       // Rule 3: Chronic Diseases
-      if (chronicDiseases && chronicDiseases.trim() !== '') {
+      if (hasChronicDisease) {
         if (category === 'immunity' || category === 'heart' || category === 'دعم عضلة القلب') {
           risk += 20;
         }
