@@ -9,6 +9,22 @@ type LinkConfig = {
   [key: string]: string;
 };
 
+type Lead = {
+  id: string;
+  full_name: string;
+  quiz_type?: string;
+  age?: string;
+  gender?: string;
+  whatsapp: string;
+  top_categories?: string[];
+  created_at: string;
+  is_message_sent?: boolean;
+  recommended_vitamins?: string[];
+  chronic_diseases?: string;
+  medical_history?: string;
+  [key: string]: any;
+};
+
 const categoryNames: Record<string, string> = {
   heart: 'صحة القلب',
   eyes: 'صحة العين',
@@ -37,9 +53,9 @@ export default function AdminDashboard() {
   const [masterBundleLink, setMasterBundleLink] = useState('');
   const [customBundles, setCustomBundles] = useState<LinkConfig>({});
   const [savingLinks, setSavingLinks] = useState(false);
-  const [selectedLead, setSelectedLead] = useState<any>(null);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [copied, setCopied] = useState(false);
-  const [leads, setLeads] = useState<any[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [loadingLeads, setLoadingLeads] = useState(true);
 
   // Tracking state
@@ -96,6 +112,26 @@ export default function AdminDashboard() {
       console.error('Error fetching leads:', error);
     } finally {
       setLoadingLeads(false);
+    }
+  };
+
+  const toggleMessageStatus = async (leadId: string, currentStatus: boolean) => {
+    try {
+      const newStatus = !currentStatus;
+      const { error } = await supabase
+        .from('leads')
+        .update({ is_message_sent: newStatus })
+        .eq('id', leadId);
+
+      if (error) throw error;
+
+      // Update local state
+      setLeads(leads.map(lead => 
+        lead.id === leadId ? { ...lead, is_message_sent: newStatus } : lead
+      ));
+    } catch (error) {
+      console.error('Error updating message status:', error);
+      alert('حدث خطأ أثناء تحديث حالة التواصل');
     }
   };
 
@@ -206,18 +242,86 @@ export default function AdminDashboard() {
   };
 
   const ProductDetails: Record<string, { benefit: string, usage: string }> = {
-    "Nordic naturals Children’s DHA": { benefit: "يُعد من أنقى مصادر الأوميجا 3 لدعم التطور الذهني للطفل، ورفع معدلات التركيز والذكاء بشكل ملحوظ.", usage: "تُحدد الجرعة حسب الوزن (مدونة على العبوة)، ويُفضل مع وجبة." },
-    "Deal Supplement Vitamin D3 + K2": { benefit: "دمج الـ D3 مع الـ K2 (MK-7) يضمن توجيه الكالسيوم مباشرة للعظام بدلاً من الشرايين، مما يدعم العظام والمناعة بفعالية.", usage: "كبسولة واحدة يومياً مع وجبة تحتوي على دهون صحية." },
-    "Viviscal Hair Growth Supplement": { benefit: "يغذي بصيلات الشعر من الداخل ويطيل دورة نمو الشعر للحد من الترقق والتساقط المستمر.", usage: "قرص مرتين يومياً (صباحاً ومساءً) بعد الأكل مع كوب ماء لمدة 3-6 أشهر." },
-    "Nutricost Lithium Orotate": { benefit: "شكل آمن من الليثيوم بجرعة منخفضة (5mg) لدعم الهدوء العصبي، التركيز، وإدارة التوتر اليومي.", usage: "كبسولة واحدة يومياً مع ماء كافٍ." },
-    "Sports Research D3 + K2": { benefit: "مُحمل بزيت جوز الهند (MCT) لضمان أقصى درجات الامتصاص، يدعم كثافة العظام وقوة الجهاز المناعي.", usage: "سوفتجل واحد يومياً مع الطعام." },
-    "Sports Research Magnesium L-Threonate": { benefit: "شكل المغنيسيوم الوحيد القادر على اختراق حاجز الدماغ (Magtein) لدعم الذاكرة، التركيز، وجودة النوم العميق.", usage: "3 كبسولات نباتية يومياً مع الطعام." },
-    "Berberine WellBetX 60 caps": { benefit: "بديل طبيعي قوي لدعم حساسية الأنسولين وضبط مستويات السكر، مما يسرع معدل حرق الدهون العنيدة.", usage: "كبسولة واحدة مرتين يومياً مع الوجبات." },
-    "Sports Research MCT Oil": { benefit: "دهون متوسطة السلسلة تُهضم فوراً لتتحول إلى طاقة سريعة للدماغ والجسم، وتدعم معدل الحرق.", usage: "ابدأ بملعقة كبيرة (15ml) يومياً ويمكن إضافته للقهوة أو السموثي." },
-    "Solgar Coq-10": { benefit: "يعمل كشرارة طاقة للخلايا، يدعم صحة عضلة القلب بقوة ويحارب الشيخوخة والإرهاق الخلوي.", usage: "كبسولة واحدة يومياً." },
-    "NOW Iron Complex": { benefit: "حديد مخلب (Ferrochel) لطيف على المعدة ولا يسبب إمساك، مع فيتامين C وفولات لضمان الامتصاص السريع وعلاج الإرهاق.", usage: "كبسولة واحدة يومياً مع وجبة، ويُفضل بعيداً عن الكالسيوم أو القهوة." },
-    "Charava NMN Powder": { benefit: "يعزز مسارات (NAD+) داخل الجسم لتجديد الطاقة الخلوية، ومكافحة علامات التقدم في العمر البيولوجي.", usage: "مكيال واحد (500mg) يومياً صباحاً." },
-    "NOW Foods Liquid Chlorophyll": { benefit: "سائل غني بمضادات الأكسدة بنكهة النعناع، يدعم الديتوكس الطبيعي، صحة الهضم، والانتعاش الداخلي.", usage: "ملعقة صغيرة (5ml) يومياً في كوب ماء." }
+    "أوميجا-3 (DHA عالي)": { 
+      benefit: "يعتبر (Nordic Naturals DHA) من أنقى مصادر الأوميجا 3 لدعم التطور الذهني، ورفع معدلات التركيز والذكاء وتطور العين بشكل ملحوظ.", 
+      usage: "تُحدد الجرعة حسب الوزن (مدونة على العبوة)، ويُفضل تناولها مع وجبة." 
+    },
+    "مالتي فيتامين فائق الجودة": { 
+      benefit: "مركب شامل (مثل Kids Smart Brain Booster أو Centrum) يسد الفجوات الغذائية، يدعم النمو البدني، ويعزز الطاقة اليومية والمناعة.", 
+      usage: "حبة إلى حبتين يومياً حسب العمر، تمضغ جيداً أو تُبلع مع الماء." 
+    },
+    "بروبيوتيك متعدد السلالات (50+ مليار)": { 
+      benefit: "يعيد بناء بكتيريا الأمعاء النافعة، مما يعالج الانتفاخات، يرفع كفاءة جهاز المناعة بنسبة 70%، ويحسن امتصاص الفيتامينات من الغذاء.", 
+      usage: "كبسولة واحدة يومياً على معدة فارغة أو قبل الوجبة بـ 30 دقيقة." 
+    },
+    "أوميجا-3 (EPA/DHA عالي التركيز)": { 
+      benefit: "يحتوي على تركيز فائق من (EPA/DHA) لتقليل الالتهابات الخلوية، دعم صحة القلب الشرايين، وتنشيط الذاكرة.", 
+      usage: "كبسولة واحدة يومياً بعد الوجبة الرئيسية." 
+    },
+    "مغنيسيوم جلايسينات": { 
+      benefit: "النسخة الأسرع امتصاصاً (Double Wood)، تهدئ الجهاز العصبي، تحسن جودة النوم العميق، وتدعم استشفاء العضلات دون أي اضطرابات هضمية.", 
+      usage: "كبسولتين ليلاً قبل النوم بساعة." 
+    },
+    "CoQ10": { 
+      benefit: "إنزيم (Solgar Coq-10) يعمل كشرارة طاقة للخلايا، يدعم صحة عضلة القلب بقوة ويحارب الشيخوخة والإرهاق الخلوي.", 
+      usage: "كبسولة واحدة صباحاً مع وجبة الإفطار." 
+    },
+    "فيتامين D3 + K2": { 
+      benefit: "دمج الـ D3 مع الـ K2 (Deal Supplement) يضمن توجيه الكالسيوم مباشرة للعظام والأسنان بدلاً من تراكمه في الشرايين، مما يدعم العظام والمناعة بفعالية.", 
+      usage: "كبسولة واحدة يومياً مع وجبة تحتوي على دهون صحية." 
+    },
+    "كولاجين مفصل أو جلوكوزامين": { 
+      benefit: "يغذي الغضاريف، يزيد من مرونة المفاصل، ويعيد بناء الكولاجين المفقود لدعم صحة البشرة والأربطة.", 
+      usage: "الجرعة الموصى بها يومياً مع كوب كبير من الماء." 
+    },
+    "أوميجا-3": { 
+      benefit: "ضروري لدعم صحة الدماغ، تقليل الالتهابات العامة في الجسم، والحفاظ على مرونة الأوعية الدموية.", 
+      usage: "كبسولة واحدة يومياً بعد وجبة دسمة." 
+    },
+    "فيتامينات B المركبة (نشطة)": { 
+      benefit: "تُحول الغذاء إلى طاقة فورية (NaturesPlus Hema-Plex)، تدعم صحة الأعصاب، وتمنع الإرهاق المستمر والخمول.", 
+      usage: "كبسولة واحدة صباحاً بعد الإفطار." 
+    },
+    "فيتامينات B المركبة": { 
+      benefit: "مركب متكامل يدعم الجهاز العصبي، يقلل من التوتر، ويرفع معدلات الطاقة والتركيز اليومي.", 
+      usage: "كبسولة واحدة صباحاً بعد الإفطار." 
+    },
+    "حديد (إذا كان هناك نقص مؤكد)": { 
+      benefit: "حديد مخلب (NOW Iron Complex) لطيف على المعدة ولا يسبب إمساك، لضمان الامتصاص السريع وعلاج فقر الدم وتساقط الشعر الناتج عن نقصه.", 
+      usage: "كبسولة واحدة يومياً، ويُفضل بعيداً عن الكالسيوم أو القهوة بساعتين." 
+    },
+    "جينكو بيلوبا": { 
+      benefit: "يعزز (Nature’s Bounty Ginkgo Biloba) تدفق الدم الغني بالأكسجين للدماغ، مما يحسن الذاكرة، التركيز، ويقلل من ضبابية التفكير.", 
+      usage: "كبسولة واحدة يومياً مع وجبة." 
+    },
+    "ل-ثيانين": { 
+      benefit: "حمض أميني يعزز موجات الألفا في الدماغ، مما يمنحك هدوءاً وتركيزاً دون التسبب في النعاس، ويقلل من تأثير الكورتيزول.", 
+      usage: "كبسولة واحدة عند الحاجة للتركيز أو تخفيف التوتر." 
+    },
+    "مغنيسيوم ثريونات": { 
+      benefit: "شكل المغنيسيوم الوحيد القادر على اختراق حاجز الدماغ لدعم الذاكرة، زيادة التركيز، والحد من التدهور المعرفي.", 
+      usage: "تؤخذ الجرعة الموصى بها مقسمة مع الطعام." 
+    },
+    "فيتامين A و C و E + زنك": { 
+      benefit: "مضادات أكسدة قوية مع الزنك (Carlson/Solgar) لتجديد خلايا البشرة، دعم المناعة، وتسريع التئام الأنسجة ومكافحة الحبوب.", 
+      usage: "كبسولة واحدة يومياً مع الطعام." 
+    },
+    "فيتامين D3": { 
+      benefit: "أساسي (Nature’s Way D3) لدعم جهاز المناعة، تحسين الحالة المزاجية، ورفع كفاءة الجسم في امتصاص الكالسيوم.", 
+      usage: "كبسولة واحدة يومياً مع وجبة تحتوي على دهون." 
+    },
+    "إنزيمات هاضمة": { 
+      benefit: "تساعد في تكسير الطعام المعقد (بروتين، دهون، نشويات)، تمنع الانتفاخ والغازات، وتضمن أقصى استفادة وامتصاص للفيتامينات.", 
+      usage: "كبسولة واحدة قبل الوجبات الدسمة مباشرة." 
+    },
+    "ل-جلوتامين": { 
+      benefit: "حمض أميني يسرع من الاستشفاء العضلي بعد التمارين الشاقة، ويدعم صحة بطانة الأمعاء بشكل فعال جداً.", 
+      usage: "مكيال (5g) بعد التمرين أو قبل النوم." 
+    },
+    "كالسيوم مركب": { 
+      benefit: "يدعم كثافة العظام والأسنان ويمنع الهشاشة، مصمم بتركيبة متوازنة لسهولة الامتصاص.", 
+      usage: "حسب التوجيهات المدونة، ويُفضل تناوله بعيداً عن مكملات الحديد." 
+    }
   };
 
   const getProductDetails = (vit: string) => {
@@ -234,12 +338,17 @@ export default function AdminDashboard() {
     const ageStr = lead.age ? lead.age : 'غير محدد';
     const genderStr = lead.gender ? lead.gender : 'غير محدد';
     
-    let medicalHistoryStr = 'الذي ذكرته';
-    if (lead.chronic_diseases || lead.medical_history) {
-      const parts = [];
-      if (lead.chronic_diseases) parts.push(lead.chronic_diseases);
-      if (lead.medical_history) parts.push(lead.medical_history);
-      medicalHistoryStr = parts.join('، ');
+    const parts = [];
+    if (lead.chronic_diseases && lead.chronic_diseases.trim() !== '' && lead.chronic_diseases.trim() !== 'لا يوجد') {
+      parts.push(lead.chronic_diseases);
+    }
+    if (lead.medical_history && lead.medical_history.trim() !== '' && lead.medical_history.trim() !== 'لا يوجد') {
+      parts.push(lead.medical_history);
+    }
+    
+    let medicalHistorySection = '';
+    if (parts.length > 0) {
+      medicalHistorySection = ` وتاريخك المرضي: ${parts.join('، ')}،`;
     }
 
     const recommendations = lead.recommended_vitamins || [];
@@ -272,7 +381,7 @@ export default function AdminDashboard() {
 
     let msg = `تقريرك الصحي المفصل من عيادة American Box 🇺🇸\n\n`;
     msg += `أهلاً ${lead.full_name}،\n`;
-    msg += `لقد قام خبراؤنا بدراسة ملفك الصحي بعناية (السن: ${ageStr}، الجنس: ${genderStr})، وبناءً على إجاباتك الدقيقة وتاريخك المرضي: ${medicalHistoryStr}، قمنا بتحليل مؤشراتك الحيوية.\n\n`;
+    msg += `لقد قام خبراؤنا بدراسة ملفك الصحي بعناية (السن: ${ageStr}، الجنس: ${genderStr})، وبناءً على إجاباتك الدقيقة${medicalHistorySection} قمنا بتحليل مؤشراتك الحيوية.\n\n`;
 
     msg += `⚠️ **التشخيص المبدئي:**\n`;
     msg += `اكتشفنا وجود استنزاف واضح ونقص في دعم المناطق التالية: ${topCategoriesList}.\n`;
@@ -311,42 +420,7 @@ export default function AdminDashboard() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const allVitamins = [
-    'أوميجا-3 (EPA/DHA عالي التركيز)',
-    'مغنيسيوم جلايسينات',
-    'CoQ10',
-    'فيتامين D3 + K2',
-    'كالسيوم مركب',
-    'كولاجين مفصل أو جلوكوزامين',
-    'بروبيوتيك متعدد السلالات (50+ مليار)',
-    'إنزيمات هاضمة',
-    'ل-جلوتامين',
-    'أوميجا-3 (DHA عالي)',
-    'فيتامينات B المركبة (نشطة)',
-    'جينكو بيلوبا',
-    'ل-ثيانين',
-    'مغنيسيوم ثريونات',
-    'فيتامينات B المركبة',
-    'فيتامين B12 (ميثيل كوبالامين)',
-    'حديد (إذا كان هناك نقص مؤكد)',
-    'لوتين 10-20 مجم + زياكسانثين',
-    'أوميجا-3',
-    'فيتامين A و C و E + زنك',
-    'مالتي فيتامين فائق الجودة',
-    'فيتامين D3',
-    'Nordic naturals Children’s DHA',
-    'Deal Supplement Vitamin D3 + K2',
-    'Viviscal Hair Growth Supplement',
-    'Nutricost Lithium Orotate',
-    'Sports Research D3 + K2',
-    'Sports Research Magnesium L-Threonate',
-    'Berberine WellBetX 60 caps',
-    'Sports Research MCT Oil',
-    'Solgar Coq-10',
-    'NOW Iron Complex',
-    'Charava NMN Powder',
-    'NOW Foods Liquid Chlorophyll'
-  ];
+  const allVitamins = Object.keys(ProductDetails);
 
   if (!isAuthenticated) {
     return (
@@ -443,20 +517,21 @@ export default function AdminDashboard() {
                   <th className="p-4 font-bold text-slate-600">رقم الهاتف</th>
                   <th className="p-4 font-bold text-slate-600">أهم الاحتياجات</th>
                   <th className="p-4 font-bold text-slate-600">التاريخ</th>
+                  <th className="p-4 font-bold text-slate-600">حالة التواصل</th>
                   <th className="p-4 font-bold text-slate-600">إجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 {loadingLeads ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-slate-500">
+                    <td colSpan={8} className="p-8 text-center text-slate-500">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                       جاري تحميل البيانات...
                     </td>
                   </tr>
                 ) : leads.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-slate-500">
+                    <td colSpan={8} className="p-8 text-center text-slate-500">
                       لا يوجد عملاء محتملين حتى الآن.
                     </td>
                   </tr>
@@ -478,11 +553,32 @@ export default function AdminDashboard() {
                       </td>
                       <td className="p-4 text-slate-600">{new Date(lead.created_at).toLocaleDateString('ar-EG')}</td>
                       <td className="p-4">
+                        {lead.is_message_sent ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            🟢 تم الإرسال
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            🟡 بانتظار الإرسال
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4 flex items-center gap-2">
                         <button
                           onClick={() => setSelectedLead(lead)}
-                          className="px-3 py-1.5 bg-accent/10 text-accent-dark font-bold rounded-lg hover:bg-accent/20 transition-colors text-sm"
+                          className="px-3 py-1.5 bg-accent/10 text-accent-dark font-bold rounded-lg hover:bg-accent/20 transition-colors text-sm whitespace-nowrap"
                         >
                           إنشاء تقرير
+                        </button>
+                        <button
+                          onClick={() => toggleMessageStatus(lead.id, !!lead.is_message_sent)}
+                          className={`px-3 py-1.5 font-bold rounded-lg transition-colors text-sm whitespace-nowrap ${
+                            lead.is_message_sent 
+                              ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' 
+                              : 'bg-green-100 text-green-700 hover:bg-green-200'
+                          }`}
+                        >
+                          {lead.is_message_sent ? 'تعليم كـ بانتظار الإرسال' : 'تعليم كـ تم الإرسال'}
                         </button>
                       </td>
                     </tr>
