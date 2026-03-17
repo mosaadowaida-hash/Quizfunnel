@@ -6,6 +6,7 @@ import { useQuizStore } from '@/store/quizStore';
 import surveyData from '@/data/Survey-Questions.json';
 import LeadCapture from './LeadCapture';
 import { ArrowRight } from 'lucide-react';
+import { event } from '@/components/PixelScripts';
 
 export default function QuizFlow() {
   const { currentQuestionIndex, answers, setAnswer, nextQuestion, prevQuestion, isFinished } = useQuizStore();
@@ -14,8 +15,19 @@ export default function QuizFlow() {
 
   const progress = ((currentQuestionIndex) / questions.length) * 100;
 
+  useEffect(() => {
+    event('QuizStarted');
+  }, []);
+
+  useEffect(() => {
+    if (isFinished) {
+      event('QuizCompleted', { completion_percentage: 100 });
+    }
+  }, [isFinished]);
+
   const handleOptionSelect = (index: number) => {
     setAnswer(currentQuestion.id, index);
+    event('QuestionAnswered', { step: currentQuestionIndex + 1, total: questions.length });
     setTimeout(() => {
       nextQuestion();
     }, 400); // slight delay for animation

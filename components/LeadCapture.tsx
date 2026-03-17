@@ -70,6 +70,9 @@ export default function LeadCapture() {
   };
 
   if (submitted) {
+    const whatsappText = encodeURIComponent(`أهلاً American Box، لقد قمت بإكمال الاستبيان الصحي الشامل للتو باسم ${formData.name}، وأريد استلام تقريري الطبي المفصل ومعرفة البروتوكول المناسب لحالتي.`);
+    const whatsappUrl = `https://wa.me/201040000728?text=${whatsappText}`;
+
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -79,10 +82,18 @@ export default function LeadCapture() {
         <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle2 className="w-10 h-10 text-green-500" />
         </div>
-        <h2 className="text-3xl font-tajawal font-bold text-slate-800 mb-4">تم استلام بياناتك بنجاح!</h2>
+        <h2 className="text-3xl font-tajawal font-bold text-slate-800 mb-4">تم حفظ بياناتك بنجاح!</h2>
         <p className="text-slate-600 mb-8 leading-relaxed">
-          سيقوم أحد خبرائنا الطبيين بالتواصل معك قريباً عبر الواتساب لإرسال التقرير الطبي الشامل وبروتوكول المكملات الأمريكي المخصص لك.
+          للحصول على تقريرك الطبي الشامل ومعرفة البروتوكول الأمريكي المخصص لك، يرجى التواصل معنا عبر الواتساب الآن.
         </p>
+        <a
+          href={whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full py-4 bg-[#25D366] text-white rounded-xl font-bold text-lg hover:bg-[#20bd5a] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-[#25D366]/30"
+        >
+          احصل على تقريرك الطبي المجاني عبر واتساب الآن
+        </a>
       </motion.div>
     );
   }
