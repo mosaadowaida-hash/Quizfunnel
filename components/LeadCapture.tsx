@@ -20,7 +20,7 @@ const categoryNames: Record<string, string> = {
 };
 
 export default function LeadCapture() {
-  const { topCategories, categoryScores, deficientCategories, recommendedVitamins, age, gender, chronicDiseases, medicalHistory, quizType } = useQuizStore();
+  const { topCategories, categoryScores, deficientCategories, recommendedVitamins, age, gender, chronicDiseases, medicalHistory, quizType, exactAnswers, labFiles } = useQuizStore();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -58,6 +58,8 @@ export default function LeadCapture() {
           topCategories: isPerfectHealth ? ['general'] : deficientCategories,
           categoryScores,
           recommendedVitamins,
+          quiz_answers: exactAnswers,
+          lab_files: labFiles,
         }),
       });
 

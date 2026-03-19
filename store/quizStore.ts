@@ -30,6 +30,8 @@ type QuizState = {
 
   currentQuestionIndex: number;
   answers: Record<number, number>; // questionId -> selectedOptionIndex
+  exactAnswers: Record<string, string>; // question text -> answer text
+  labFiles: string[];
   categoryScores: CategoryScores;
   riskPercentages: Record<string, number>;
   deficientCategories: string[];
@@ -37,6 +39,8 @@ type QuizState = {
   isFinished: boolean;
   topCategories: string[];
   setAnswer: (questionId: number, optionIndex: number) => void;
+  setExactAnswer: (question: string, answer: string) => void;
+  addLabFile: (url: string) => void;
   nextQuestion: () => void;
   prevQuestion: () => void;
   calculateResults: () => void;
@@ -71,6 +75,8 @@ export const useQuizStore = create<QuizState>((set, get) => ({
 
   currentQuestionIndex: 0,
   answers: {},
+  exactAnswers: {},
+  labFiles: [],
   categoryScores: { ...initialScores },
   riskPercentages: {},
   deficientCategories: [],
@@ -81,6 +87,18 @@ export const useQuizStore = create<QuizState>((set, get) => ({
   setAnswer: (questionId, optionIndex) => {
     set((state) => ({
       answers: { ...state.answers, [questionId]: optionIndex },
+    }));
+  },
+
+  setExactAnswer: (question, answer) => {
+    set((state) => ({
+      exactAnswers: { ...state.exactAnswers, [question]: answer },
+    }));
+  },
+
+  addLabFile: (url) => {
+    set((state) => ({
+      labFiles: [...state.labFiles, url],
     }));
   },
 

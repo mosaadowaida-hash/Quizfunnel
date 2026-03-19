@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuizStore } from '@/store/quizStore';
 import LeadCapture from './LeadCapture';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Upload, CheckCircle2 } from 'lucide-react';
 import { event } from '@/components/PixelScripts';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function QuizFlow() {
-  const { currentQuestionIndex, answers, setAnswer, nextQuestion, prevQuestion, isFinished, age, gender, chronicDiseases, medicalHistory, setMedicalProfile, quizType, quizData, setQuizData } = useQuizStore();
+  const { currentQuestionIndex, answers, setAnswer, setExactAnswer, nextQuestion, prevQuestion, isFinished, age, gender, chronicDiseases, medicalHistory, setMedicalProfile, quizType, quizData, setQuizData, addLabFile, labFiles } = useQuizStore();
 
   const [showInitialAssessment, setShowInitialAssessment] = useState(true);
   const [localProfile, setLocalProfile] = useState({
@@ -19,6 +20,7 @@ export default function QuizFlow() {
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const loadQuizData = async () => {
@@ -99,13 +101,46 @@ export default function QuizFlow() {
   const questions = quizData.universal_quiz.questions;
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex) / questions.length) * 100;
+  const options = currentQuestion?.options_override || quizData?.common_options || [];
 
   const handleOptionSelect = (index: number) => {
     setAnswer(currentQuestion.id, index);
+    setExactAnswer(currentQuestion.text, options[index]);
     event('QuestionAnswered', { step: currentQuestionIndex + 1, total: questions.length });
     setTimeout(() => {
       nextQuestion();
     }, 400); // slight delay for animation
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    setError('');
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('lab_results')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('lab_results')
+          .getPublicUrl(fileName);
+
+        addLabFile(publicUrl);
+      }
+    } catch (err) {
+      console.error('Error uploading file:', err);
+      setError('حدث خطأ أثناء رفع الملف. يرجى المحاولة مرة أخرى.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleStartQuiz = (e: React.FormEvent) => {
@@ -192,6 +227,46 @@ export default function QuizFlow() {
               </p>
             </div>
 
+            <div className="mt-4">
+              <label className="block text-sm font-bold text-slate-700 mb-2">إرفاق أحدث التحاليل الطبية (اختياري - لزيادة دقة التشخيص)</label>
+              <p className="text-xs text-slate-500 mb-2">يفضل ألا يكون قد مر عليها أكثر من 3 أشهر.</p>
+              
+              <div className="relative">
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,image/png,image/jpeg"
+                  onChange={handleFileUpload}
+                  disabled={isUploading}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                />
+                <div className={`w-full px-4 py-4 rounded-xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 ${isUploading ? 'border-primary/50 bg-primary/5' : 'border-slate-300 bg-slate-50 hover:border-primary/50 hover:bg-slate-100'}`}>
+                  {isUploading ? (
+                    <>
+                      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-sm font-medium text-primary">جاري الرفع...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6 text-slate-400" />
+                      <span className="text-sm font-medium text-slate-600">اضغط هنا أو اسحب الملفات لرفعها</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {labFiles.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {labFiles.map((url, index) => (
+                    <div key={index} className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 p-2 rounded-lg border border-emerald-100">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>تم رفع الملف {index + 1} بنجاح</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {error && (
               <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
                 {error}
@@ -210,8 +285,6 @@ export default function QuizFlow() {
       </div>
     );
   }
-
-  const options = currentQuestion.options_override || quizData.common_options;
 
   return (
     <div className="w-full max-w-2xl mx-auto px-6 py-8 flex flex-col min-h-[80vh] relative z-10">

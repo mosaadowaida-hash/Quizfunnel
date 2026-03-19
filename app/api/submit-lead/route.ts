@@ -15,7 +15,9 @@ export async function POST(req: Request) {
       quizType,
       topCategories, 
       categoryScores, 
-      recommendedVitamins 
+      recommendedVitamins,
+      quiz_answers,
+      lab_files
     } = body;
 
     if (!name || !phone) {
@@ -35,6 +37,8 @@ export async function POST(req: Request) {
         quiz_type: quizType || 'شامل',
         top_categories: topCategories,
         recommended_vitamins: recommendedVitamins,
+        quiz_answers: quiz_answers || null,
+        lab_files: lab_files || null,
       },
     ]);
 
