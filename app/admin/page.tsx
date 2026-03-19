@@ -314,19 +314,6 @@ export default function AdminDashboard() {
     const ageStr = lead.age ? lead.age : 'غير محدد';
     const genderStr = lead.gender ? lead.gender : 'غير محدد';
     
-    const parts = [];
-    if (lead.chronic_diseases && lead.chronic_diseases.trim() !== '' && lead.chronic_diseases.trim() !== 'لا يوجد') {
-      parts.push(lead.chronic_diseases);
-    }
-    if (lead.medical_history && lead.medical_history.trim() !== '' && lead.medical_history.trim() !== 'لا يوجد') {
-      parts.push(lead.medical_history);
-    }
-    
-    let medicalHistorySection = '';
-    if (parts.length > 0) {
-      medicalHistorySection = ` وتاريخك المرضي: ${parts.join('، ')}،`;
-    }
-
     const recommendations = lead.recommended_vitamins || [];
     const topCategoriesList = lead.top_categories?.map((cat: string) => categoryNames[cat] || cat).join('، ') || 'الصحة العامة';
 
@@ -353,48 +340,57 @@ export default function AdminDashboard() {
       bundleLink = customBundles['child'] || masterBundleLink;
     }
 
-    const quizTypeWarning = QuizTypeContent[lead.quiz_type || 'شامل']?.warning || QuizTypeContent['شامل'].warning;
+    const warningText = QuizTypeContent[lead.quiz_type || 'شامل']?.warning || QuizTypeContent['شامل'].warning;
 
-    let msg = `تقريرك الصحي المفصل من عيادة American Box\n\n`;
-    msg += `أهلاً ${lead.full_name}،\n`;
-    msg += `لقد قام خبراؤنا بدراسة ملفك الصحي بعناية (السن: ${ageStr}، الجنس: ${genderStr})، وبناءً على إجاباتك الدقيقة${medicalHistorySection} قمنا بتحليل مؤشراتك الحيوية.\n\n`;
+    let report = `تقرير طبي مفصل - American Box\n`;
+    report += `اسم المراجع: ${lead.full_name || 'غير محدد'}\n`;
+    report += `العمر: ${ageStr} | النوع: ${genderStr}\n\n`;
 
-    msg += `التشخيص المبدئي:\n`;
-    msg += `اكتشفنا وجود استنزاف واضح ونقص في دعم المناطق التالية: ${topCategoriesList}.\n`;
-    msg += `${quizTypeWarning}\n\n`;
+    // Only add medical history if it exists and is not a common "empty" phrase
+    const ignoredPhrases = ["لا", "لا يوجد", "لا شيء", "لاشي", "لايوجد", "الحمد لله", "الحمدلله", "none", "nothing", "no"];
+    const hasChronic = lead.chronic_diseases && lead.chronic_diseases.trim() !== "" && !ignoredPhrases.includes(lead.chronic_diseases.trim().toLowerCase());
+    const hasHistory = lead.medical_history && lead.medical_history.trim() !== "" && !ignoredPhrases.includes(lead.medical_history.trim().toLowerCase());
 
-    msg += `البروتوكول العلاجي المقترح (مدة الكورس: 3 إلى 6 أشهر):\n`;
-    msg += `لقد صممنا لك هذا البروتوكول الأمريكي المخصص لحالتك:\n\n`;
+    if (hasChronic || hasHistory) {
+      report += `التاريخ المرضي:\n`;
+      if (hasChronic) report += `- الأمراض المزمنة: ${lead.chronic_diseases}\n`;
+      if (hasHistory) report += `- التاريخ الطبي: ${lead.medical_history}\n`;
+      report += `\n`;
+    }
 
-    recommendations.forEach((vit: any) => {
-      const url = links[vit] || '#';
-      const details = getProductDetails(vit);
+    report += `--- التقييم المبدئي ---\n`;
+    report += `بناءً على التقييم الدقيق للأعراض ومراجعة المؤشرات الحيوية، لوحظ وجود احتياج لدعم: ${topCategoriesList}.\n`;
+    report += `${warningText}\n\n`;
+
+    report += `--- البروتوكول المقترح (من 3 إلى 6 أشهر) ---\n`;
+
+    // Loop through recommended vitamins
+    recommendations.forEach((vitamin: string, index: number) => {
+      let benefit = ProductDetails[vitamin]?.benefit || "تعويض النقص المباشر ودعم الوظائف الحيوية.";
+      let usage = ProductDetails[vitamin]?.usage || "حسب التوجيهات المدونة على العبوة.";
       
-      let usage = details.usage;
-      if (vit === "مالتي فيتامين فائق الجودة" && lead.age) {
-        const ageNum = parseInt(lead.age, 10);
-        if (!isNaN(ageNum) && ageNum < 18) {
-          usage = "حبة إلى حبتين يومياً حسب العمر، تمضغ جيداً أو تُبلع مع الماء.";
-        }
+      // Dynamic Pediatric Override
+      if (vitamin === "مالتي فيتامين فائق الجودة" && lead.age && parseInt(lead.age) < 18) {
+        benefit = "دعم النمو البدني والتطور الذهني وسد الفجوات الغذائية في مرحلة النمو.";
+        usage = "حبة إلى حبتين يومياً حسب إرشادات العبوة، تُعطى تحت إشراف الوالدين.";
       }
 
-      msg += `${vit}\n`;
-      msg += `- لماذا نرشحه لك؟ ${details.benefit}\n`;
-      msg += `- طريقة الاستخدام: ${usage}\n`;
-      msg += `- رابط المنتج: ${url}\n\n`;
+      let productLink = links[vitamin] || "#";
+
+      report += `${index + 1}. ${vitamin}\n`;
+      report += `- دواعي الاستعمال: ${benefit}\n`;
+      report += `- الجرعة الموصى بها: ${usage}\n`;
+      report += `- رابط الصرف: ${productLink}\n\n`;
     });
 
-    msg += `الحل الجذري (عرض الباقة المتكاملة):\n`;
-    msg += `للحصول على أسرع نتيجة، يمكنك الحصول على كل ما يحتاجه جسمك في "الباقة المتكاملة" بخصم حصري 20% من هنا:\n`;
-    msg += `${bundleLink || '#'}\n\n`;
+    report += `--- التوصيات الطبية الشاملة ---\n`;
+    report += `لضمان تحقيق أقصى استفادة علاجية، يُنصح بالبدء في الباقة المتكاملة المخصصة لحالتكم:\n`;
+    report += `رابط الباقة: ${bundleLink}\n\n`;
 
-    msg += `المتابعة والتحاليل:\n`;
-    msg += `لضمان أفضل النتائج، نوصي بإجراء تحاليل دورية (مثل صورة دم كاملة وفيتامين د)، ونتمنى منك التواصل معنا كل 30 يوماً لمتابعة تطور حالتك وتحديث البروتوكول إذا لزم الأمر.\n\n`;
+    report += `المتابعة: يُنصح بإجراء الفحوصات الدورية (مثل صورة دم كاملة ومستويات فيتامين د)، والتواصل معنا بعد 30 يوماً لتقييم الاستجابة وتحديث البروتوكول إذا لزم الأمر.\n\n`;
+    report += `مع تمنياتنا بدوام الصحة والعافية،\nالفريق الطبي - American Box`;
 
-    msg += `مع تمنياتنا لك بدوام الصحة،\n`;
-    msg += `فريقك الطبي - American Box`;
-
-    return msg;
+    return report;
   };
 
   const copyToClipboard = () => {
