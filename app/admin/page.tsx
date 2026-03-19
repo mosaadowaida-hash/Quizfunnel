@@ -22,6 +22,8 @@ type Lead = {
   recommended_vitamins?: string[];
   chronic_diseases?: string;
   medical_history?: string;
+  quiz_answers?: Record<string, string>;
+  lab_files?: string[];
   [key: string]: any;
 };
 
@@ -42,6 +44,21 @@ const categoryNames: Record<string, string> = {
   'الدورة الدموية': 'الدورة الدموية'
 };
 
+const quizTypesList = [
+  "الكل",
+  "صحة العظام والمفاصل",
+  "صحة القلب والأوعية الدموية",
+  "الصحة النفسية وتقليل التوتر",
+  "دعم المناعة",
+  "فقدان الوزن والتمثيل الغذائي",
+  "مكافحة الشيخوخة",
+  "العناية بالبشرة",
+  "العناية بالشعر",
+  "المكملات الرياضية وبناء العضلات",
+  "صحة الطفل",
+  "شامل"
+];
+
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
@@ -49,11 +66,13 @@ export default function AdminDashboard() {
   const [loginError, setLoginError] = useState('');
 
   const [activeTab, setActiveTab] = useState<'leads' | 'links' | 'tracking'>('leads');
+  const [selectedQuizTypeFilter, setSelectedQuizTypeFilter] = useState<string>('الكل');
   const [links, setLinks] = useState<LinkConfig>({});
   const [masterBundleLink, setMasterBundleLink] = useState('');
   const [customBundles, setCustomBundles] = useState<LinkConfig>({});
   const [savingLinks, setSavingLinks] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [leadModalTab, setLeadModalTab] = useState<'report' | 'answers' | 'labs'>('report');
   const [copied, setCopied] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loadingLeads, setLoadingLeads] = useState(true);
@@ -402,6 +421,10 @@ export default function AdminDashboard() {
 
   const allVitamins = Object.keys(ProductDetails);
 
+  const filteredLeads = selectedQuizTypeFilter === 'الكل' 
+    ? leads 
+    : leads.filter(lead => (lead.quiz_type || 'شامل') === selectedQuizTypeFilter);
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4" dir="rtl">
@@ -487,49 +510,69 @@ export default function AdminDashboard() {
         </div>
 
         {activeTab === 'leads' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <table className="w-full text-right">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th className="p-4 font-bold text-slate-600">الاسم</th>
-                  <th className="p-4 font-bold text-slate-600">نوع الاستبيان</th>
-                  <th className="p-4 font-bold text-slate-600">السن/الجنس</th>
-                  <th className="p-4 font-bold text-slate-600">رقم الهاتف</th>
-                  <th className="p-4 font-bold text-slate-600">أهم الاحتياجات</th>
-                  <th className="p-4 font-bold text-slate-600">التاريخ</th>
-                  <th className="p-4 font-bold text-slate-600">حالة التواصل</th>
-                  <th className="p-4 font-bold text-slate-600">إجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loadingLeads ? (
+          <div className="space-y-6">
+            {/* Smart Filtering System */}
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+              <div className="flex gap-2 min-w-max">
+                {quizTypesList.map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setSelectedQuizTypeFilter(type)}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-colors whitespace-nowrap ${
+                      selectedQuizTypeFilter === type
+                        ? 'bg-primary text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <table className="w-full text-right">
+                <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-slate-500">
-                      <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                      جاري تحميل البيانات...
-                    </td>
+                    <th className="p-4 font-bold text-slate-600">الاسم</th>
+                    <th className="p-4 font-bold text-slate-600">نوع الاستبيان</th>
+                    <th className="p-4 font-bold text-slate-600">السن/الجنس</th>
+                    <th className="p-4 font-bold text-slate-600">رقم الهاتف</th>
+                    <th className="p-4 font-bold text-slate-600">أهم الاحتياجات</th>
+                    <th className="p-4 font-bold text-slate-600">التاريخ</th>
+                    <th className="p-4 font-bold text-slate-600">حالة التواصل</th>
+                    <th className="p-4 font-bold text-slate-600">إجراءات</th>
                   </tr>
-                ) : leads.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="p-8 text-center text-slate-500">
-                      لا يوجد عملاء محتملين حتى الآن.
-                    </td>
-                  </tr>
-                ) : (
-                  leads.map((lead) => (
-                    <tr key={lead.id} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="p-4 font-medium text-slate-800">{lead.full_name}</td>
-                      <td className="p-4 text-slate-600">
-                        <span className="px-2 py-1 bg-primary/10 text-primary rounded-md text-xs font-bold">
-                          {lead.quiz_type || 'شامل'}
-                        </span>
+                </thead>
+                <tbody>
+                  {loadingLeads ? (
+                    <tr>
+                      <td colSpan={8} className="p-8 text-center text-slate-500">
+                        <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                        جاري تحميل البيانات...
                       </td>
-                      <td className="p-4 text-slate-600">
-                        {lead.age ? `${lead.age} سنة` : '-'} / {lead.gender || '-'}
+                    </tr>
+                  ) : filteredLeads.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="p-8 text-center text-slate-500">
+                        لا يوجد عملاء محتملين مطابقين للبحث.
                       </td>
-                      <td className="p-4 text-slate-600" dir="ltr">{lead.whatsapp}</td>
-                      <td className="p-4 text-slate-600">
-                        {lead.top_categories?.map((c: string) => categoryNames[c] || c).join('، ')}
+                    </tr>
+                  ) : (
+                    filteredLeads.map((lead) => (
+                      <tr key={lead.id} className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="p-4 font-medium text-slate-800">{lead.full_name}</td>
+                        <td className="p-4 text-slate-600">
+                          <span className="px-2 py-1 bg-primary/10 text-primary rounded-md text-xs font-bold">
+                            {lead.quiz_type || 'شامل'}
+                          </span>
+                        </td>
+                        <td className="p-4 text-slate-600">
+                          {lead.age ? `${lead.age} سنة` : '-'} / {lead.gender || '-'}
+                        </td>
+                        <td className="p-4 text-slate-600" dir="ltr">{lead.whatsapp}</td>
+                        <td className="p-4 text-slate-600">
+                          {lead.top_categories?.map((c: string) => categoryNames[c] || c).join('، ')}
                       </td>
                       <td className="p-4 text-slate-600">{new Date(lead.created_at).toLocaleDateString('ar-EG')}</td>
                       <td className="p-4">
@@ -545,10 +588,13 @@ export default function AdminDashboard() {
                       </td>
                       <td className="p-4 flex items-center gap-2">
                         <button
-                          onClick={() => setSelectedLead(lead)}
+                          onClick={() => {
+                            setSelectedLead(lead);
+                            setLeadModalTab('report');
+                          }}
                           className="px-3 py-1.5 bg-accent/10 text-accent-dark font-bold rounded-lg hover:bg-accent/20 transition-colors text-sm whitespace-nowrap"
                         >
-                          إنشاء تقرير
+                          عرض التفاصيل
                         </button>
                         <button
                           onClick={() => toggleMessageStatus(lead.id, !!lead.is_message_sent)}
@@ -566,6 +612,7 @@ export default function AdminDashboard() {
                 )}
               </tbody>
             </table>
+          </div>
           </div>
         )}
 
@@ -697,37 +744,109 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Email Modal */}
+        {/* Lead Details Modal */}
         {selectedLead && (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 className="font-tajawal font-bold text-lg text-slate-800">تقرير واتساب لـ {selectedLead.full_name}</h3>
+                <h3 className="font-tajawal font-bold text-lg text-slate-800">تفاصيل العميل: {selectedLead.full_name}</h3>
                 <button onClick={() => setSelectedLead(null)} className="p-1 hover:bg-slate-200 rounded-lg transition-colors">
                   <X className="w-5 h-5 text-slate-500" />
                 </button>
               </div>
               
-              <div className="p-6 overflow-y-auto flex-grow">
-                <pre className="whitespace-pre-wrap font-cairo text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-200 text-sm leading-relaxed">
-                  {generateWhatsAppReport(selectedLead)}
-                </pre>
+              <div className="flex border-b border-slate-100 bg-white px-4 pt-2 gap-4">
+                <button 
+                  onClick={() => setLeadModalTab('report')}
+                  className={`pb-2 px-2 font-bold text-sm transition-colors border-b-2 ${leadModalTab === 'report' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                >
+                  تقرير واتساب
+                </button>
+                <button 
+                  onClick={() => setLeadModalTab('answers')}
+                  className={`pb-2 px-2 font-bold text-sm transition-colors border-b-2 ${leadModalTab === 'answers' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                >
+                  إجابات الاستبيان
+                </button>
+                <button 
+                  onClick={() => setLeadModalTab('labs')}
+                  className={`pb-2 px-2 font-bold text-sm transition-colors border-b-2 ${leadModalTab === 'labs' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                >
+                  التحاليل المرفقة
+                </button>
               </div>
 
-              <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+              <div className="p-6 overflow-y-auto flex-grow bg-slate-50/50">
+                {leadModalTab === 'report' && (
+                  <pre className="whitespace-pre-wrap font-cairo text-slate-700 bg-white p-5 rounded-xl border border-slate-200 text-sm leading-relaxed shadow-sm">
+                    {generateWhatsAppReport(selectedLead)}
+                  </pre>
+                )}
+                
+                {leadModalTab === 'answers' && (
+                  <div className="space-y-4">
+                    {selectedLead.quiz_answers && Object.keys(selectedLead.quiz_answers).length > 0 ? (
+                      Object.entries(selectedLead.quiz_answers).map(([question, answer], idx) => (
+                        <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                          <p className="text-sm font-bold text-slate-800 mb-2">{question}</p>
+                          <p className="text-sm text-primary bg-primary/5 p-3 rounded-lg border border-primary/10">{answer}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center p-8 text-slate-500 bg-white rounded-xl border border-slate-200">
+                        لا توجد إجابات مسجلة لهذا العميل.
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {leadModalTab === 'labs' && (
+                  <div className="space-y-4">
+                    {selectedLead.lab_files && selectedLead.lab_files.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {selectedLead.lab_files.map((url, idx) => (
+                          <a 
+                            key={idx} 
+                            href={url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-primary hover:shadow-md transition-all group"
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                              <LinkIcon className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 overflow-hidden">
+                              <p className="text-sm font-bold text-slate-800 truncate">مرفق تحليل {idx + 1}</p>
+                              <p className="text-xs text-slate-500 truncate" dir="ltr">{url}</p>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center p-8 text-slate-500 bg-white rounded-xl border border-slate-200">
+                        لا يوجد تحاليل مرفقة.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 border-t border-slate-100 bg-white flex justify-end gap-3">
                 <button
                   onClick={() => setSelectedLead(null)}
-                  className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-200 rounded-lg transition-colors"
+                  className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded-lg transition-colors"
                 >
                   إغلاق
                 </button>
-                <button
-                  onClick={copyToClipboard}
-                  className="flex items-center gap-2 px-6 py-2 bg-[#25D366] text-white rounded-lg font-bold hover:bg-[#20bd5a] transition-colors"
-                >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copied ? 'تم النسخ!' : 'نسخ التقرير'}
-                </button>
+                {leadModalTab === 'report' && (
+                  <button
+                    onClick={copyToClipboard}
+                    className="flex items-center gap-2 px-6 py-2 bg-[#25D366] text-white rounded-lg font-bold hover:bg-[#20bd5a] transition-colors shadow-sm"
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copied ? 'تم النسخ!' : 'نسخ التقرير'}
+                  </button>
+                )}
               </div>
             </div>
           </div>

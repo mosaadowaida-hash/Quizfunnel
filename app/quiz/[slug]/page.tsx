@@ -39,7 +39,7 @@ export default function QuizSlugPage() {
         event('StartQuiz', { quiz_type: mappedQuizType });
         eventFired.current = true;
       }
-      setIsReady(true);
+      setTimeout(() => setIsReady(true), 0);
     } else {
       router.replace('/');
     }
