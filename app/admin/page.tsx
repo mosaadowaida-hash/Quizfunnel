@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Settings, Users, Link as LinkIcon, Copy, Check, X, Loader2, Activity } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Settings, Users, Link as LinkIcon, Copy, Check, X, Loader2, Activity, Download, FileText } from 'lucide-react';
 import surveyData from '@/data/quizzes/comprehensive.json';
 import { supabase } from '@/lib/supabaseClient';
+import * as XLSX from 'xlsx';
+import { useReactToPrint } from 'react-to-print';
 
 type LinkConfig = {
   [key: string]: string;
@@ -82,6 +84,9 @@ export default function AdminDashboard() {
   const [tiktokPixel, setTiktokPixel] = useState('');
   const [gaPixel, setGaPixel] = useState('');
   const [savingTracking, setSavingTracking] = useState(false);
+
+  const contentRef = useRef<HTMLDivElement>(null);
+  const reactToPrintFn = useReactToPrint({ contentRef });
 
   useEffect(() => {
     const authStatus = sessionStorage.getItem('adminAuth');
@@ -425,6 +430,36 @@ export default function AdminDashboard() {
     ? leads 
     : leads.filter(lead => (lead.quiz_type || 'شامل') === selectedQuizTypeFilter);
 
+  const exportToExcel = () => {
+    const dataToExport = filteredLeads.map(lead => {
+      const formattedAnswers = lead.quiz_answers 
+        ? Object.entries(lead.quiz_answers).map(([q, a]) => `${q}: ${a}`).join(' | ')
+        : '';
+        
+      return {
+        "الاسم": lead.full_name || 'غير محدد',
+        "رقم الهاتف": lead.whatsapp,
+        "رقم الواتساب": lead.whatsapp,
+        "العمر": lead.age || 'غير محدد',
+        "النوع": lead.gender || 'غير محدد',
+        "نوع الاستبيان": lead.quiz_type || 'شامل',
+        "الاحتياجات (التشخيص)": lead.top_categories?.map((c: string) => categoryNames[c] || c).join('، ') || 'الصحة العامة',
+        "الأمراض المزمنة": lead.chronic_diseases || 'لا يوجد',
+        "التاريخ المرضي": lead.medical_history || 'لا يوجد',
+        "حالة الرسالة": lead.is_message_sent ? 'تم الإرسال' : 'بانتظار الإرسال',
+        "تاريخ التسجيل": new Date(lead.created_at).toLocaleDateString('ar-EG'),
+        "إجابات الاستبيان": formattedAnswers
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Leads");
+    
+    const currentDate = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(workbook, `AmericanBox_Leads_${currentDate}.xlsx`);
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4" dir="rtl">
@@ -512,22 +547,31 @@ export default function AdminDashboard() {
         {activeTab === 'leads' && (
           <div className="space-y-6">
             {/* Smart Filtering System */}
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
-              <div className="flex gap-2 min-w-max">
-                {quizTypesList.map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setSelectedQuizTypeFilter(type)}
-                    className={`px-4 py-2 rounded-full text-sm font-bold transition-colors whitespace-nowrap ${
-                      selectedQuizTypeFilter === type
-                        ? 'bg-primary text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {type}
-                  </button>
-                ))}
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+              <div className="overflow-x-auto w-full md:w-auto">
+                <div className="flex gap-2 min-w-max">
+                  {quizTypesList.map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setSelectedQuizTypeFilter(type)}
+                      className={`px-4 py-2 rounded-full text-sm font-bold transition-colors whitespace-nowrap ${
+                        selectedQuizTypeFilter === type
+                          ? 'bg-primary text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
               </div>
+              <button
+                onClick={exportToExcel}
+                className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors whitespace-nowrap shadow-sm"
+              >
+                <Download className="w-5 h-5" />
+                تصدير إلى Excel 📊
+              </button>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -831,12 +875,19 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              <div className="p-4 border-t border-slate-100 bg-white flex justify-end gap-3">
+              <div className="p-4 border-t border-slate-100 bg-white flex justify-end gap-3 flex-wrap">
                 <button
                   onClick={() => setSelectedLead(null)}
                   className="px-4 py-2 text-slate-600 font-bold hover:bg-slate-100 rounded-lg transition-colors"
                 >
                   إغلاق
+                </button>
+                <button
+                  onClick={() => reactToPrintFn()}
+                  className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-sm"
+                >
+                  <FileText className="w-4 h-4" />
+                  تحميل التقرير PDF 📄
                 </button>
                 {leadModalTab === 'report' && (
                   <button
@@ -851,6 +902,69 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+        {/* Hidden Print Component */}
+        <div className="absolute -left-[9999px] top-0">
+          <div ref={contentRef} className="p-8 font-cairo bg-white text-black w-[800px]" dir="rtl">
+            <div className="border-b-2 border-slate-800 pb-4 mb-6 text-center">
+              <h1 className="text-3xl font-tajawal font-bold text-slate-900">American Box 🇺🇸</h1>
+              <h2 className="text-xl text-slate-600 mt-2">تقرير التقييم الصحي</h2>
+            </div>
+
+            {selectedLead && (
+              <>
+                <div className="grid grid-cols-2 gap-4 mb-8 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                  <div><span className="font-bold">الاسم:</span> {selectedLead.full_name || 'غير محدد'}</div>
+                  <div><span className="font-bold">التاريخ:</span> {new Date(selectedLead.created_at).toLocaleDateString('ar-EG')}</div>
+                  <div><span className="font-bold">العمر:</span> {selectedLead.age || 'غير محدد'}</div>
+                  <div><span className="font-bold">النوع:</span> {selectedLead.gender || 'غير محدد'}</div>
+                  <div><span className="font-bold">رقم الهاتف:</span> <span dir="ltr">{selectedLead.whatsapp}</span></div>
+                  <div><span className="font-bold">نوع الاستبيان:</span> {selectedLead.quiz_type || 'شامل'}</div>
+                </div>
+
+                <div className="mb-8">
+                  <h3 className="text-lg font-bold border-b border-slate-200 pb-2 mb-4">التاريخ المرضي</h3>
+                  <div className="space-y-2">
+                    <p><span className="font-bold">الأمراض المزمنة:</span> {selectedLead.chronic_diseases || 'لا يوجد'}</p>
+                    <p><span className="font-bold">التاريخ الطبي:</span> {selectedLead.medical_history || 'لا يوجد'}</p>
+                  </div>
+                </div>
+
+                <div className="mb-8">
+                  <h3 className="text-lg font-bold border-b border-slate-200 pb-2 mb-4">إجابات الاستبيان</h3>
+                  {selectedLead.quiz_answers && Object.keys(selectedLead.quiz_answers).length > 0 ? (
+                    <table className="w-full text-right border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100">
+                          <th className="border border-slate-300 p-2 w-1/2">السؤال</th>
+                          <th className="border border-slate-300 p-2 w-1/2">الإجابة</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(selectedLead.quiz_answers).map(([q, a], idx) => (
+                          <tr key={idx}>
+                            <td className="border border-slate-300 p-2 text-sm">{q}</td>
+                            <td className="border border-slate-300 p-2 text-sm font-bold text-slate-800">{a}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p className="text-slate-500">لا توجد إجابات مسجلة.</p>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-bold border-b border-slate-200 pb-2 mb-4">التحاليل المرفقة</h3>
+                  <p>
+                    {selectedLead.lab_files && selectedLead.lab_files.length > 0 
+                      ? `تم إرفاق عدد (${selectedLead.lab_files.length}) ملفات تحاليل طبية مع هذا التقييم.`
+                      : 'لا يوجد تحاليل مرفقة.'}
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
