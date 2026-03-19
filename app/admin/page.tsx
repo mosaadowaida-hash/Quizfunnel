@@ -26,6 +26,7 @@ type Lead = {
   medical_history?: string;
   quiz_answers?: Record<string, string>;
   lab_files?: string[];
+  is_exported?: boolean;
   [key: string]: any;
 };
 
@@ -78,6 +79,7 @@ export default function AdminDashboard() {
   const [copied, setCopied] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loadingLeads, setLoadingLeads] = useState(true);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
 
   // Tracking state
   const [metaPixel, setMetaPixel] = useState('');
@@ -430,8 +432,15 @@ export default function AdminDashboard() {
     ? leads 
     : leads.filter(lead => (lead.quiz_type || 'شامل') === selectedQuizTypeFilter);
 
-  const exportToExcel = () => {
-    const dataToExport = filteredLeads.map(lead => {
+  const exportToExcel = async () => {
+    if (selectedLeadIds.length === 0) {
+      alert('الرجاء تحديد عميل واحد على الأقل لتصدير بياناته.');
+      return;
+    }
+
+    const leadsToExport = filteredLeads.filter(lead => selectedLeadIds.includes(lead.id));
+
+    const dataToExport = leadsToExport.map(lead => {
       const formattedAnswers = lead.quiz_answers 
         ? Object.entries(lead.quiz_answers).map(([q, a]) => `${q}: ${a}`).join(' | ')
         : '';
@@ -458,6 +467,25 @@ export default function AdminDashboard() {
     
     const currentDate = new Date().toISOString().split('T')[0];
     XLSX.writeFile(workbook, `AmericanBox_Leads_${currentDate}.xlsx`);
+
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ is_exported: true })
+        .in('id', selectedLeadIds);
+
+      if (error) throw error;
+
+      setLeads(prevLeads => 
+        prevLeads.map(l => 
+          selectedLeadIds.includes(l.id) ? { ...l, is_exported: true } : l
+        )
+      );
+      setSelectedLeadIds([]);
+    } catch (err) {
+      console.error('Error updating export status:', err);
+      alert('حدث خطأ أثناء تحديث حالة التصدير في قاعدة البيانات.');
+    }
   };
 
   if (!isAuthenticated) {
@@ -578,6 +606,20 @@ export default function AdminDashboard() {
               <table className="w-full text-right">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
+                    <th className="p-4 font-bold text-slate-600 w-12 text-center">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
+                        checked={filteredLeads.length > 0 && selectedLeadIds.length === filteredLeads.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedLeadIds(filteredLeads.map(l => l.id));
+                          } else {
+                            setSelectedLeadIds([]);
+                          }
+                        }}
+                      />
+                    </th>
                     <th className="p-4 font-bold text-slate-600">الاسم</th>
                     <th className="p-4 font-bold text-slate-600">نوع الاستبيان</th>
                     <th className="p-4 font-bold text-slate-600">السن/الجنس</th>
@@ -591,20 +633,34 @@ export default function AdminDashboard() {
                 <tbody>
                   {loadingLeads ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-500">
+                      <td colSpan={9} className="p-8 text-center text-slate-500">
                         <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                         جاري تحميل البيانات...
                       </td>
                     </tr>
                   ) : filteredLeads.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-500">
+                      <td colSpan={9} className="p-8 text-center text-slate-500">
                         لا يوجد عملاء محتملين مطابقين للبحث.
                       </td>
                     </tr>
                   ) : (
                     filteredLeads.map((lead) => (
                       <tr key={lead.id} className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="p-4 text-center">
+                          <input 
+                            type="checkbox" 
+                            className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer"
+                            checked={selectedLeadIds.includes(lead.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedLeadIds(prev => [...prev, lead.id]);
+                              } else {
+                                setSelectedLeadIds(prev => prev.filter(id => id !== lead.id));
+                              }
+                            }}
+                          />
+                        </td>
                         <td className="p-4 font-medium text-slate-800">{lead.full_name}</td>
                         <td className="p-4 text-slate-600">
                           <span className="px-2 py-1 bg-primary/10 text-primary rounded-md text-xs font-bold">
@@ -620,15 +676,22 @@ export default function AdminDashboard() {
                       </td>
                       <td className="p-4 text-slate-600">{new Date(lead.created_at).toLocaleDateString('ar-EG')}</td>
                       <td className="p-4">
-                        {lead.is_message_sent ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            🟢 تم الإرسال
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            🟡 بانتظار الإرسال
-                          </span>
-                        )}
+                        <div className="flex flex-col gap-2 items-start">
+                          {lead.is_message_sent ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              🟢 تم الإرسال
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              🟡 بانتظار الإرسال
+                            </span>
+                          )}
+                          {lead.is_exported && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                              📥 تم التصدير
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4 flex items-center gap-2">
                         <button
