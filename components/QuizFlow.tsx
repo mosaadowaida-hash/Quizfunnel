@@ -135,9 +135,9 @@ export default function QuizFlow() {
 
         addLabFile(publicUrl);
       }
-    } catch (err) {
-      console.error('Error uploading file:', err);
-      setError('حدث خطأ أثناء رفع الملف. يرجى المحاولة مرة أخرى.');
+    } catch (err: any) {
+      console.error('Supabase upload error:', err);
+      setError(err.message || 'حدث خطأ أثناء رفع الملف. يرجى المحاولة مرة أخرى.');
     } finally {
       setIsUploading(false);
     }
