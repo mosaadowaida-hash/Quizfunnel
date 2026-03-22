@@ -3,6 +3,7 @@ import { Tajawal, Cairo } from 'next/font/google';
 import './globals.css';
 import PixelScripts from '@/components/PixelScripts';
 import { supabase } from '@/lib/supabaseClient';
+import { Analytics } from '@vercel/analytics/next';
 
 const tajawal = Tajawal({
   subsets: ['arabic'],
@@ -68,6 +69,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           gaPixel={settings?.ga_pixel || null}
         />
         {children}
+        <Analytics />
       </body>
     </html>
   );
