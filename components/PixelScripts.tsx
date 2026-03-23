@@ -78,27 +78,6 @@ function PixelScriptsInner({ metaPixel, tiktokPixel, gaPixel }: PixelScriptsProp
           }}
         />
       )}
-
-      {gaPixel && (
-        <>
-          <Script
-            strategy="afterInteractive"
-            src={`https://www.googletagmanager.com/gtag/js?id=${gaPixel}`}
-          />
-          <Script
-            id="ga-pixel"
-            strategy="afterInteractive"
-            dangerouslySetInnerHTML={{
-              __html: `
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', '${gaPixel}');
-              `,
-            }}
-          />
-        </>
-      )}
     </>
   );
 }

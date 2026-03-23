@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Tajawal, Cairo } from 'next/font/google';
+import Script from 'next/script';
 import './globals.css';
 import PixelScripts from '@/components/PixelScripts';
 import { supabase } from '@/lib/supabaseClient';
@@ -62,6 +63,24 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body className="font-cairo bg-slate-50 text-slate-900 antialiased min-h-screen flex flex-col" suppressHydrationWarning>
+        <Script
+          strategy="afterInteractive"
+          src={`https://www.googletagmanager.com/gtag/js?id=G-RZ0GN7EMN0`}
+        />
+        <Script
+          id="google-analytics"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-RZ0GN7EMN0', {
+                page_path: window.location.pathname,
+              });
+            `,
+          }}
+        />
         <PixelScripts 
           metaPixel={settings?.meta_pixel || null}
           tiktokPixel={settings?.tiktok_pixel || null}
