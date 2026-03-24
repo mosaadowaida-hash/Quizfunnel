@@ -4,6 +4,7 @@ import Script from 'next/script';
 import './globals.css';
 import PixelScripts from '@/components/PixelScripts';
 import { supabase } from '@/lib/supabaseClient';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const tajawal = Tajawal({
   subsets: ['arabic'],
@@ -87,6 +88,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           gaPixel={settings?.ga_pixel || null}
         />
         {children}
+        <SpeedInsights />
       </body>
     </html>
   );
